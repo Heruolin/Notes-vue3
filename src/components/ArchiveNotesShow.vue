@@ -8,10 +8,9 @@
                     </div>
                 </template>
                 <div>
-                    <h1>{{ item.title }}</h1>
+                    <h1 class="centered-title">{{ item.title }}</h1>
                 </div>
-                <div>
-                    {{ item.text }}
+                <div v-html="formatText(item.text)">
                 </div>
                 <template #footer>
                     <div class="flex gap-2 mb-2">
@@ -102,6 +101,12 @@ const fetchNotes = async () => {
 onMounted(() => {
     fetchNotes();
 });
+
+// 格式化文本，将换行符替换为 <br> 标签
+const formatText = (text: string) => {
+    return text.replace(/\n/g, '<br>');
+};
+
 </script>
 
 <style scoped>
@@ -114,8 +119,8 @@ onMounted(() => {
 }
 
 .card-item {
-    flex: 1 1 250px; /* 固定宽度 */
-    max-width: 250px; /* 固定宽度 */
+    flex: 1 1 300px; /* 略微加大宽度 */
+    max-width: 300px; /* 略微加大宽度 */
     box-sizing: border-box;
 }
 
@@ -125,6 +130,11 @@ onMounted(() => {
 }
 
 .card-header {
+    text-align: center;
+}
+
+/* 标题居中样式 */
+.centered-title {
     text-align: center;
 }
 </style>

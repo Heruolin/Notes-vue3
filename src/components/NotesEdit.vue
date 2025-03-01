@@ -1,56 +1,98 @@
 <template>
-  <el-dialog v-model="visibleProxy" title="编辑便签" width="650px" align-center :show-close="false">
+  <el-dialog v-model="visibleProxy" title="编辑便签" width="650px" align-center>
     <template #header>
-      <!-- 图片区域 -->
-      <div class="image-gallery">
-        <div v-for="(image, index) in localData.imgList" :key="index" class="image-container">
-          <el-image :src="`/assets/Notesimages/${image}`" alt="test image" class="image"
-            :preview-src-list="localData.imgList.map(img => `/assets/Notesimages/${img}`)" :initial-index="index" />
-          <el-button circle type="danger" size="small" icon="Delete" @click="deleteImage(index)" class="delete-btn" />
-        </div>
-      </div>
+      <!-- 修改标题 -->
+      <el-input v-model="localData.title" placeholder="请输入标题"></el-input>
     </template>
-    <!-- 修改标题 -->
-    <el-input v-model="localData.title" placeholder="请输入标题"></el-input>
+
+    <!-- 图片区域 -->
+    <div class="image-gallery">
+      <div v-for="(image, index) in localData.imgList" :key="index" class="image-container">
+        <el-image
+          :src="`/assets/Notesimages/${image}`"
+          alt="test image"
+          class="image"
+          :preview-src-list="localData.imgList.map(img => `/assets/Notesimages/${img}`)"
+          :initial-index="index"
+        />
+        <el-button
+          circle
+          type="danger"
+          size="small"
+          icon="Delete"
+          @click="deleteImage(index)"
+          class="delete-btn"
+        />
+      </div>
+    </div>
+
     <!-- 便签内容 -->
     <div>
-      <el-input v-model="localData.text" style="width: 619px;margin-top: 5px;margin-bottom: 8px;"
-        :autosize="{ minRows: 6, maxRows: 20 }" type="textarea" placeholder="请输入内容" />
+      <el-input
+        v-model="localData.text"
+        style="width: 619px;margin-top: 5px;margin-bottom: 8px;"
+        :autosize="{ minRows: 6, maxRows: 20 }"
+        type="textarea"
+        placeholder="请输入内容"
+      />
     </div>
 
     <!-- 标签 -->
-    <div style="margin-bottom: -10px;">
-      <el-tag v-for="(tag, index) in localData.tagList" :key="index" closable type="primary" effect="plain"
-        @close="removeTag(index)" round>
+    <div style="margin-bottom: 20px;">
+      <el-tag
+        v-for="(tag, index) in localData.tagList"
+        :key="index"
+        closable
+        type="primary"
+        effect="plain"
+        @close="removeTag(index)"
+        round
+      >
         {{ tag }}
       </el-tag>
     </div>
 
     <template #footer>
       <!-- 底部按钮 -->
-      <div class="footer-buttons">
-        <div>
-          <el-button circle title="添加图片" icon="Picture" @click="AddImg" />
-          <el-button circle title="添加标签" icon="CollectionTag" @click="AddTag" />
-        </div>
-        <el-color-picker v-model="localData.color" title="修改背景色" show-alpha @change="handleColorChange" />
+      <div style="text-align: left; margin-bottom: 10px;">
+
+        <el-button circle title="添加图片" icon="Picture" @click="AddImg"/>
+
+        <el-button circle title="背景颜色" icon="Orange" @click="BackgroundColor"/>
+
+        <el-button circle title="添加标签" icon="CollectionTag" @click="AddTag"/>
+        
+        <el-button circle title="归档" icon="FolderAdd" @click="Archive"/>
+
+        <el-button circle title="删除便签" icon="Failed" @click="Failed" />
+        
       </div>
       <div>
-        <el-button @click="close">关闭</el-button>
+        <el-button @click="close">保存</el-button>
       </div>
     </template>
-    <el-dialog title="添加标签" v-model="centerDialogVisible" width="30%" :show-close="false" append-to-body align-center>
-      <div>
-        <el-table :data="tagList" @selection-change="handleSelectionChange">
-          <el-table-column type="selection" width="55">
-          </el-table-column>
-          <el-table-column prop="tag" label="标签名称">
-          </el-table-column>
-        </el-table>
-        <div style="text-align: right; margin-top: 10px;">
-          <el-button @click="addSelectedTags">添加选中标签</el-button>
-        </div>
+    <el-dialog
+      title="添加标签"
+      v-model="centerDialogVisible"
+      width="30%"
+      :show-close="false"
+      append-to-body
+      align-center>
+    <div>
+      <el-table :data="tagList" @selection-change="handleSelectionChange">
+        <el-table-column
+          type="selection"
+          width="55">
+        </el-table-column>
+        <el-table-column
+          prop="tag"
+          label="标签名称">
+        </el-table-column>
+      </el-table>
+      <div style="text-align: right; margin-top: 10px;">
+        <el-button @click="addSelectedTags">添加选中标签</el-button>
       </div>
+    </div>
     </el-dialog>
   </el-dialog>
 </template>
@@ -81,7 +123,7 @@ const visibleProxy = computed({
 // 其他逻辑，如处理数据、保存、关闭等
 const localData = ref({ ...props.data });
 
-// 监听 props.data 的变化
+// 监听 props.data 的变化（如果需要同步更新）
 watch(
   () => props.data,
   (newValue) => {
@@ -124,6 +166,22 @@ const save = async () => {
   }
 };
 
+// 重置便签数据
+const resetNoteData = () => {
+  localData.value = {
+    id: null,
+    userid: null,
+    title: '',
+    text: '',
+    tag: '',
+    img: null,
+    color: '',
+    order: 0,
+    imgList: [],
+    tagList: []
+  };
+};
+
 // 添加标签
 const AddTag = () => {
   centerDialogVisible.value = true;
@@ -137,10 +195,10 @@ const AddImg = () => {
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/*';
-
+  
   // 监听文件上传事件
   input.addEventListener('change', handleImageUpload);
-
+  
   // 模拟点击上传按钮
   input.click();
 };
@@ -150,22 +208,17 @@ const handleImageUpload = (event: Event) => {
   const file = input.files ? input.files[0] : null;
 
   if (file) {
+    const uniqueName = `${Date.now()}-${file.name}`; // 使用时间戳+原文件名生成唯一文件名
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file', file, uniqueName);
     formData.append('id', localData.value.id); // 传递便签的 ID
 
     // 上传文件到服务器
     axios.post('http://localhost:8080/Notes/uploadImage', formData)
       .then((response) => {
-        if (response.data.code === "200") {
-          const uniqueFileName = response.data.data.fileName; // 获取重命名后的图片名字
-          if (uniqueFileName) {
-            localData.value.imgList.push(uniqueFileName); // 将上传的图片添加到图片列表中
-            ElMessage.success('图片上传成功'); // 确保传递正确的参数
-          } else {
-            console.error('图片上传失败，未获取到文件名', response.data);
-            alert('图片上传失败，请重试');
-          }
+        if (response.data.success) {
+          localData.value.imgList.push(uniqueName); // 将上传的图片添加到图片列表中
+          console.log('图片上传成功', response.data);
         } else {
           console.error('图片上传失败', response.data);
           alert('图片上传失败，请重试');
@@ -186,10 +239,20 @@ const deleteImage = (index: number) => {
   localData.value.imgList.splice(index, 1);
 };
 
-// 处理颜色变化
-const handleColorChange = (color: string) => {
-  localData.value.color = color;
-};
+//背景色选择按钮
+const BackgroundColor = () => {
+  console.log("背景颜色事件")
+}
+
+const Archive = () => {
+  centerDialogVisible.value = false
+  console.log("归档事件")
+}
+//便签删除按钮
+const Failed = () => {
+  centerDialogVisible.value = false
+  console.log("便签删除事件")
+}
 
 //删除标签
 const removeTag = (index: number) => {
@@ -248,42 +311,30 @@ const addSelectedTags = () => {
 /* 图片区域 */
 .image-gallery {
   display: flex;
-  flex-wrap: wrap;
-  /* 换行支持 */
-  justify-content: center;
-  /* 水平居中 */
-  align-items: center;
-  /* 垂直居中 */
-  gap: 10px;
-  /* 图片间距 */
+  flex-wrap: wrap; /* 换行支持 */
+  justify-content: center; /* 水平居中 */
+  align-items: center; /* 垂直居中 */
+  gap: 10px; /* 图片间距 */
   padding: 10px;
 }
 
 /* 每张图片容器 */
 .image-container {
-  flex-shrink: 0;
-  /* 图片不缩小 */
-  max-width: 619px;
-  /* 限制图片最大宽度 */
+  flex-shrink: 0; /* 图片不缩小 */
+  max-width: 619px; /* 限制图片最大宽度 */
   position: relative;
   display: flex;
-  justify-content: center;
-  /* 图片居中 */
-  align-items: center;
-  /* 图片居中 */
+  justify-content: center; /* 图片居中 */
+  align-items: center; /* 图片居中 */
 }
 
 /* 图片样式 */
 .image {
   width: auto;
-  max-width: 100%;
-  /* 图片宽度限制为容器的宽度 */
-  max-height: 350px;
-  /* 图片最高限制 */
-  border-radius: 4px;
-  /* 圆角样式 */
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  /* 图片阴影 */
+  max-width: 100%; /* 图片宽度限制为容器的宽度 */
+  max-height: 350px; /* 图片最高限制 */
+  border-radius: 4px; /* 圆角样式 */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* 图片阴影 */
 }
 
 /* 隐藏按钮 */
@@ -299,13 +350,5 @@ const addSelectedTags = () => {
 /* 鼠标悬停时显示按钮 */
 .image-container:hover .delete-btn {
   display: inline-flex;
-}
-
-/* 底部按钮容器 */
-.footer-buttons {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px; 
 }
 </style>

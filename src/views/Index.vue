@@ -51,7 +51,7 @@
             </el-menu-item-group>
           </el-sub-menu>
           <!-- 清单 -->
-          <el-menu-item index="list" @click="showList">
+          <el-menu-item index="Task" @click="showTask">
               <el-icon><Tickets /></el-icon>
               <span>清单</span>
           </el-menu-item>
@@ -75,7 +75,7 @@
               <el-menu-item index="archiveNotes" @click="showArchiveNotes">
                 便签
               </el-menu-item>
-              <el-menu-item index="archiveList" @click="showArchiveList">
+              <el-menu-item index="archiveTask" @click="showArchiveTask">
                 清单
               </el-menu-item>
               <el-menu-item index="archiveRemind" @click="showArchiveRemind">
@@ -90,13 +90,13 @@
               <span>回收站</span>
             </template>
             <el-menu-item-group>
-              <el-menu-item index="recycleNotes" @click="showTrashNotes">
+              <el-menu-item index="recycleNotes" @click="showRecycleNotes">
                 便签
               </el-menu-item>
-              <el-menu-item index="recycleList" @click="showTrashList">
+              <el-menu-item index="recycleTask" @click="showRecycleTask">
                 清单
               </el-menu-item>
-              <el-menu-item index="recycleRemind" @click="showTrashRemind">
+              <el-menu-item index="recycleRemind" @click="showRecycleRemind">
                 提醒
               </el-menu-item>
             </el-menu-item-group>
@@ -106,8 +106,17 @@
     <!-- 主体 -->
       <el-main>
         <NotesShow v-if="currentView === 'notes'" :notes="filteredNotes" />
-        <ArchiveNotesShow v-if="currentView === 'archiveNotes'" :notes="notes" @noteRestored="handleNoteRestored" />
-        <TrashNotesShow v-if="currentView === 'TrashNotes'" :notes="notes" @noteRestored="handleNoteRestored" />
+        <TaskShow v-if="currentView === 'Task'" :refreshTaskgroups="true" />
+        <ArchiveNotesShow v-if="currentView === 'archiveNotes'" :notes="notes" />
+        <ArchiveTaskShow v-if="currentView === 'archiveTask'" />
+        <TrashNotesShow v-if="currentView === 'recycleNotes'" :notes="notes" />
+        <TrashTaskShow v-if="currentView === 'recycleTask'" />
+        <!-- <RemindShow v-if="currentView === 'remind'" /> -->
+        <!-- <ArchiveTaskShow v-if="currentView === 'archiveTask'" /> -->
+        <!-- <ArchiveRemindShow v-if="currentView === 'archiveRemind'" /> -->
+        <!-- <RecycleNotesShow v-if="currentView === 'recycleNotes'" /> -->
+        <!-- <RecycleTaskShow v-if="currentView === 'recycleTask'" /> -->
+        <!-- <RecycleRemindShow v-if="currentView === 'recycleRemind'" /> -->
       </el-main>
     </el-container>
     <TagEdit v-model:visible="tagEditVisible" @refreshTags="fetchTags" />
@@ -132,7 +141,6 @@ import axios from 'axios'
 import NotesShow from '@/components/NotesShow.vue';
 import TagEdit from '@/components/TagEdit.vue';
 import ArchiveNotesShow from '@/components/ArchiveNotesShow.vue';
-import TrashNotesShow from '@/components/TrashNotesShow.vue';
 
 // 折叠状态
 const isCollapse = ref(true);
@@ -218,8 +226,8 @@ const filterNotesByTag = (tag) => {
 };
 
 // 显示清单
-const showList = () => {
-  currentView.value = 'list';
+const showTask = () => {
+  currentView.value = 'Task';
 };
 
 // 显示提醒
@@ -233,8 +241,8 @@ const showArchiveNotes = () => {
 };
 
 // 显示归档清单
-const showArchiveList = () => {
-  currentView.value = 'archiveList';
+const showArchiveTask = () => {
+  currentView.value = 'archiveTask';
 };
 
 // 显示归档提醒
@@ -243,18 +251,18 @@ const showArchiveRemind = () => {
 };
 
 // 显示回收站便签
-const showTrashNotes = () => {
-  currentView.value = 'TrashNotes';
+const showRecycleNotes = () => {
+  currentView.value = 'recycleNotes';
 };
 
 // 显示回收站清单
-const showTrashList = () => {
-  currentView.value = 'TrashList';
+const showRecycleTask= () => {
+  currentView.value = 'recycleTask';
 };
 
 // 显示回收站提醒
-const showTrashRemind = () => {
-  currentView.value = 'TrashRemind';
+const showRecycleRemind = () => {
+  currentView.value = 'recycleRemind';
 };
 
 // 处理点击事件
@@ -264,14 +272,6 @@ const handleItemClick = (item) => {
   } else {
     console.log(`${item.label} 被点击，但未定义 action`);
   }
-};
-
-// 处理便签还原事件
-const handleNoteRestored = (id: number) => {
-  // 从归档便签列表中移除已还原的便签
-  notes.value = notes.value.filter(note => note.id !== id);
-  // 重新获取便签数据
-  fetchNotes();
 };
 
 const handleOpen = (key: string, keyPath: string[]) => {

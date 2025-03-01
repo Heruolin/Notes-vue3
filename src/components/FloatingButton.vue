@@ -7,27 +7,35 @@
         <!-- 次级按钮 -->
         <div class="sub-btns">
             <el-button :icon="Plus" @click="handleNotes" circle class="sub-btn" />
-            <el-button :icon="Tickets" @click="handleList" circle class="sub-btn" />
+            <el-button :icon="Tickets" @click="handleTask" circle class="sub-btn" />
             <el-button :icon="AlarmClock" @click="handleRemind" circle class="sub-btn" />
         </div>
     </div>
     <NotesEdit v-model:visible="dialogVisible" @close="closeEditor" @refreshNotes="refreshNotes" />
+    <TaskEdit v-model:visible="taskDialogVisible" @close="closeTaskEditor" @refreshTaskgroups="refreshTaskgroups" />
   </template>
   
   <script setup lang="ts">
   import { ref, onMounted, defineEmits } from 'vue';
   import { Plus, Tickets, AlarmClock } from '@element-plus/icons-vue';
   import NotesEdit from "./NotesEdit.vue";
+  import TaskEdit from "./TaskEdit.vue";
+  import axios from "axios";
   
   const isDragging = ref(false);
   const showSubButtons = ref(false); 
   const dialogVisible = ref(false);
+  const taskDialogVisible = ref(false);
   
   // 定义 emit 事件
-  const emit = defineEmits(['update:visible', 'close', 'refreshNotes']);
+  const emit = defineEmits(['update:visible', 'close', 'refreshNotes', 'refreshTaskgroups']);
   
   const refreshNotes = () => {
       emit('refreshNotes');
+  };
+  
+  const refreshTaskgroups = () => {
+      emit('refreshTaskgroups');
   };
   
   // 添加便签按钮
@@ -37,9 +45,9 @@
   };
   
   // 添加清单按钮
-  const handleList = () => {
-      resetNoteData(); // 重置清单数据
-      dialogVisible.value = true;
+  const handleTask = () => {
+      resetTaskData(); // 重置清单数据
+      taskDialogVisible.value = true;
   };
   // 添加提醒按钮
   const handleRemind = () => {
@@ -48,6 +56,11 @@
   };
   const closeEditor = () => {
       dialogVisible.value = false;
+  };
+
+  const closeTaskEditor = () => {
+      taskDialogVisible.value = false;
+      refreshTaskgroups(); // 关闭编辑页后刷新任务组列表
   };
   
   // 侧边栏拖拽功能
@@ -95,6 +108,16 @@
           notesEditComponent.resetNoteData();
       }
   };
+
+  // 重置清单数据
+  const resetTaskData = () => {
+      // 触发 TaskEdit 组件中的 resetTaskData 方法
+      const taskEditComponent = document.querySelector('TaskEdit') as any;
+      if (taskEditComponent && taskEditComponent.resetTaskData) {
+        taskEditComponent.resetTaskData();
+      }
+  };
+
   </script>
   
 

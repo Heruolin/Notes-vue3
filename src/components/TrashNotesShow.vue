@@ -8,10 +8,9 @@
                     </div>
                 </template>
                 <div>
-                    <h1>{{ item.title }}</h1>
+                    <h1 class="centered-title">{{ item.title }}</h1>
                 </div>
-                <div>
-                    {{ item.text }}
+                <div v-html="formatText(item.text)">
                 </div>
                 <template #footer>
                     <div class="flex gap-2 mb-2">
@@ -20,8 +19,8 @@
                         </el-tag>
                     </div>
                     <div class="flex justify-start gap-2" style="margin-top: 10px;">
-                        <el-button circle title="还原" icon="RefreshRight" type="success" @click.stop="restore(item.id)" />
-                        <el-button circle title="删除" icon="Delete" type="danger" @click.stop="confirmDelete(item.id)" />
+                        <el-button circle title="还原" icon="RefreshRight" @click.stop="restore(item.id)" />
+                        <el-button circle title="删除" icon="Delete" @click.stop="deleteNote(item.id)" />
                     </div>
                 </template>
             </el-card>
@@ -35,7 +34,7 @@
 <script setup lang="ts">
 import { ref, onMounted, defineEmits } from "vue";
 import axios from "axios";
-import { ElMessage, ElMessageBox } from 'element-plus';
+import { ElMessage } from 'element-plus';
 
 // 定义接口
 interface Notecard {
@@ -80,23 +79,6 @@ const restore = async (id: number) => {
     }
 };
 
-// 确认删除便签事件
-const confirmDelete = (id: number) => {
-    ElMessageBox.confirm(
-        '此操作将永久删除该便签, 是否继续?',
-        '提示',
-        {
-            confirmButtonText: '确定',
-            cancelButtonText: '取消',
-            type: 'warning',
-        }
-    ).then(() => {
-        deleteNote(id);
-    }).catch(() => {
-        ElMessage.info('已取消删除');
-    });
-};
-
 // 删除便签事件
 const deleteNote = async (id: number) => {
     try {
@@ -134,6 +116,11 @@ const fetchNotes = async () => {
     }
 };
 
+// 格式化文本，将换行符替换为 <br> 标签
+const formatText = (text: string) => {
+    return text.replace(/\n/g, '<br>');
+};
+
 // 初始化时加载数据
 onMounted(() => {
     fetchNotes();
@@ -150,8 +137,8 @@ onMounted(() => {
 }
 
 .card-item {
-    flex: 1 1 250px; /* 固定宽度 */
-    max-width: 250px; /* 固定宽度 */
+    flex: 1 1 300px; /* 略微加大宽度 */
+    max-width: 300px; /* 略微加大宽度 */
     box-sizing: border-box;
 }
 
@@ -161,6 +148,11 @@ onMounted(() => {
 }
 
 .card-header {
+    text-align: center;
+}
+
+/* 标题居中样式 */
+.centered-title {
     text-align: center;
 }
 </style>

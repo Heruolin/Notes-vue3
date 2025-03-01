@@ -35,6 +35,16 @@ const routes = [
     path: '/ArchiveNotesShow',
     name: 'ArchiveNotesShow',
     component: () => import('../components/ArchiveNotesShow.vue'),
+  },
+  {
+    path: '/TaskEdit',
+    name: 'TaskEdit',
+    component: () => import('../components/TaskEdit.vue'),
+  },
+  {
+    path: '/TaskShow',
+    name: 'TaskShow',
+    component: () => import('../components/TaskShow.vue'),
   }
 ]
 

@@ -120,8 +120,8 @@ const addTag = async () => {
     const response = await axios.post('http://localhost:8080/Tag/TagAdd', { tag: newTag.value.trim() })
     if (response.data.code === '200') {
       ElMessage.success('标签添加成功')
-      tags.value.push({ id: response.data.data.id, tag: newTag.value.trim(), editing: false })
       newTag.value = ''
+      fetchTags() // 重新获取标签列表，确保标签列表立即更新
       emit('refreshTags') // 通知父组件刷新标签列表
     } else {
       ElMessage.error('标签添加失败')
