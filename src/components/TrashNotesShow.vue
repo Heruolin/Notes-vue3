@@ -19,8 +19,8 @@
                         </el-tag>
                     </div>
                     <div class="flex justify-start gap-2" style="margin-top: 10px;">
-                        <el-button circle title="还原" icon="RefreshRight" @click.stop="restore(item.id)" />
-                        <el-button circle title="删除" icon="Delete" @click.stop="deleteNote(item.id)" />
+                        <el-button circle title="还原" icon="RefreshRight" @click.stop="restore(item.id)" type="success" />
+                        <el-button circle title="删除" icon="Delete" @click.stop="deleteNote(item.id)" type="danger"/>
                     </div>
                 </template>
             </el-card>
@@ -34,7 +34,7 @@
 <script setup lang="ts">
 import { ref, onMounted, defineEmits } from "vue";
 import axios from "axios";
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 
 // 定义接口
 interface Notecard {
@@ -71,6 +71,7 @@ const restore = async (id: number) => {
             ElMessage.success(`便签还原成功`);
             // 触发父组件的事件，通知便签已还原
             emit('noteRestored', id);
+            fetchNotes(); // 重新获取便签列表
         } else {
             console.error("Failed to restore note:", response.data.message);
         }
@@ -81,26 +82,52 @@ const restore = async (id: number) => {
 
 // 删除便签事件
 const deleteNote = async (id: number) => {
-    try {
-        const response = await axios.delete(`http://localhost:8080/Notes/Trash/Delete`, {
-            params: { id }
-        });
-        if (response.data && response.data.code === '200') {
-            // 从列表中移除已删除的便签
-            list.value = list.value.filter(item => item.id !== id);
-            ElMessage.success(`便签删除成功`);
-        } else {
-            console.error("Failed to delete note:", response.data.message);
+    ElMessageBox.confirm(
+        '是否要永久删除该便签（此操作将无法撤回）?',
+        '提示',
+        {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning',
         }
-    } catch (error) {
-        console.error("Error deleting note:", error);
-    }
+    ).then(async () => {
+        try {
+            const response = await axios.delete(`http://localhost:8080/Notes/Trash/Delete`, {
+                params: { id }
+            });
+            if (response.data && response.data.code === '200') {
+                // 从列表中移除已删除的便签
+                list.value = list.value.filter(item => item.id !== id);
+                ElMessage.success(`便签删除成功`);
+                fetchNotes(); // 重新获取便签列表
+            } else {
+                console.error("Failed to delete note:", response.data.message);
+            }
+        } catch (error) {
+            console.error("Error deleting note:", error);
+        }
+    }).catch(() => {
+        ElMessage.info('已取消删除');
+    });
 };
 
 // 获取数据
 const fetchNotes = async () => {
     try {
-        const response = await axios.get("http://localhost:8080/Notes/Trash/Noteslist");
+        const userId = localStorage.getItem('userId'); // 获取当前用户的userid
+        const token = localStorage.getItem('jwt_token'); // 获取存储的token
+        if (!userId || !token) {
+            ElMessage.error('用户未登录或缺少必要的认证信息');
+            return;
+        }
+        const response = await axios.get("http://localhost:8080/Notes/Trash/Noteslist", {
+            headers: {
+                Authorization: `Bearer ${token}` // 传递Authorization头部
+            },
+            params: {
+                userid: userId // 传递userid参数
+            }
+        });
         if (response.data && Array.isArray(response.data.data)) {
             list.value = response.data.data.map((item) => ({
                 ...item,

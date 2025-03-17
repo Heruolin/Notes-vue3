@@ -86,7 +86,6 @@ const dialogVisible = ref(false);
 // 用于存储当前选中的任务组
 const selectedTaskgroup = ref<Taskgroup | null>(null);
 
-// 获取所有任务组
 const fetchTaskgroups = async () => {
   try {
     const response = await axios.get("http://localhost:8080/Taskgroup/Taskgrouplist");
@@ -267,9 +266,9 @@ const markAsIncomplete = async (taskgroupId: number, taskId: number) => {
   }
 };
 
-// 过滤出状态为 active 的任务组
+// 过滤出状态为 actived和teashed 的任务清单
 const activeTaskgroups = computed(() => {
-  return taskgroups.value.filter(taskgroup => taskgroup.status === 'active');
+  return taskgroups.value.filter(taskgroup => taskgroup.status !== 'archived' && taskgroup.status !== 'trashed');
 });
 
 // 初始化时加载数据
@@ -315,6 +314,6 @@ onMounted(() => {
 
 .button-group {
   display: flex;
-  gap: 25px; /* 调整按钮之间的间距 */
+  gap: 27px; /* 增加按钮之间的间距 */
 }
 </style>

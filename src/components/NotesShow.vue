@@ -28,7 +28,7 @@
                 </el-card>
             </div>
         </VueDraggable>
-        <NotesEdit v-model:visible="dialogVisible" :data="selectedCard" @refreshNotes="fetchNotes" @close="closeEditor" />
+        <NotesEdit v-model:visible="dialogVisible" :data="selectedCard" @refreshNotes="fetchNotes" @@close="closeEditor" />
         <FloatingButton @refreshNotes="fetchNotes"/>
         <div class="flex justify-between">
             <preview-list :list="list" />
@@ -38,8 +38,8 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted } from "vue";
-import { type DraggableEvent, VueDraggable } from "vue-draggable-plus";
-import axios from "axios";
+import { type DraggableEvent, VueDraggable  } from "vue-draggable-plus";
+import request from '@/utils/request';
 import NotesEdit from "./NotesEdit.vue";
 import FloatingButton from "./FloatingButton.vue";
 import { ElMessage, ElMessageBox } from 'element-plus';
@@ -56,6 +56,18 @@ interface Notecard {
     order: number;
     imgList: string[];
     tagList: string[];
+}
+
+interface LoginResponse {
+  code: string;
+  message: string;
+  user: {
+    userid: number;
+    username: string;
+    password: string;
+  };
+  token: string;
+  data: Notecard[];
 }
 
 // 接收父组件传递的 notes 属性
@@ -83,54 +95,71 @@ const selectedCard = ref<Notecard | null>(null);
 
 // 获取数据
 const fetchNotes = async () => {
-    try {
-        const response = await axios.get("http://localhost:8080/Notes/Noteslist");
-        if (response.data && Array.isArray(response.data.data)) {
-            list.value = response.data.data.map((item) => ({
-                ...item,
-                imgList: item.img ? item.img.split(",") : [],
-                tagList: item.tag ? item.tag.split(",") : [],
-            })).sort((a, b) => a.order - b.order); // 按 order 排序
-            console.log("list updated:", list.value); 
-        } else {
-            console.error("Unexpected response format:", response.data);
-        }
-    } catch (error) {
-        console.error("Failed to fetch notes:", error);
+  try {
+    const userId = localStorage.getItem('userId'); // 获取当前用户的userid
+    const data: LoginResponse = await request.get('/Notes/Noteslist', {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('token')}`
+      },
+      params: {
+        userid: userId // 传递userid参数
+      }
+    });
+    if (data.code === "200" && Array.isArray(data.data)) {
+      list.value = data.data.map((item) => ({
+        ...item,
+        imgList: item.img ? item.img.split(",").filter((img) => img.trim() !== "") : [],
+        tagList: item.tag ? item.tag.split(",").filter((tag) => tag.trim() !== "") : [],
+      })).sort((a, b) => a.order - b.order); // 按 order 排序
+      console.log("list updated:", list.value); 
+    } else {
+      console.error("Unexpected response format:", data);
     }
+  } catch (error) {
+    ElMessage.error('获取便签数据失败，请检查网络连接');
+    console.error("Failed to fetch notes:", error);
+  }
 };
 
 // 拖拽结束事件，更新顺序
 const onEnd = async () => {
-    try {
-        const newOrder = list.value.map((item, index) => ({
-            id: item.id,
-            order: index, // 设置新的顺序
-        }));
-        await axios.put("http://localhost:8080/Notes/UpdateOrder", newOrder);
-        console.log("Order updated successfully!");
-    } catch (error) {
-        console.error("Failed to update order:", error);
+  try {
+    const newOrder = list.value.map((item, index) => ({
+      id: item.id,
+      order: index, // 设置新的顺序
+    }));
+    const data: LoginResponse = await request.put('/Notes/UpdateOrder', newOrder, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+    if (data.code === "200") {
+      console.log("Order updated successfully!");
+    } else {
+      console.error("Order update failed:", data);
     }
+  } catch (error) {
+    console.error("Failed to update order:", error);
+  }
 };
 
 // 拖拽事件处理函数
 const onStart = (e: DraggableEvent) => {
-    console.log("start", e);
+  console.log("start", e);
 };
 
 const onUpdate = (e: DraggableEvent) => {
-    console.log("update", e);
-    // 更新顺序
-    list.value.forEach((item, index) => {
-        item.order = index; // 每个项的 order 更新为新的顺序
-    });
+  console.log("update", e);
+  // 更新顺序
+  list.value.forEach((item, index) => {
+    item.order = index; // 每个项的 order 更新为新的顺序
+  });
 };
 
 // 打开编辑页
 const openEditor = (item: Notecard) => {
-    selectedCard.value = { ...item }; // 克隆对象，避免直接修改原始数据
-    dialogVisible.value = true;
+  selectedCard.value = { ...item }; // 克隆对象，避免直接修改原始数据
+  dialogVisible.value = true;
 };
 
 // 关闭编辑页
@@ -140,79 +169,85 @@ const closeEditor = () => {
 
 // 归档事件
 const Archive = async (id: number) => {
-    try {
-        const response = await axios.put("http://localhost:8080/Notes/Archive/Add", null, {
-            params: { id }
-        });
-        if (response.data.code === "200") {
-            ElMessage.success("便签归档成功");
-            fetchNotes(); // 重新获取便签列表
-        } else {
-            ElMessage.error("便签归档失败");
-        }
-    } catch (error) {
-        ElMessage.error("便签归档失败，请检查网络连接");
+  try {
+    const data: LoginResponse = await request.put('/Notes/Archive/Add', null, {
+      params: { id },
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+    if (data.code === "200") {
+      ElMessage.success("便签归档成功");
+      fetchNotes(); // 重新获取便签列表
+    } else {
+      ElMessage.error("便签归档失败");
     }
+  } catch (error) {
+    ElMessage.error("便签归档失败，请检查网络连接");
+  }
 };
 
 // 确认删除便签事件
 const confirmTrash = (id: number) => {
-    ElMessageBox.confirm(
-        '是否将便签放入回收站（便签将在回收站存放10天）?',
-        '提示',
-        {
-            confirmButtonText: '确定',
-            cancelButtonText: '取消',
-            type: 'warning',
-        }
-    ).then(() => {
-        Trash(id);
-    }).catch(() => {
-        ElMessage.info('已取消删除');
-    });
+  ElMessageBox.confirm(
+    '是否将便签放入回收站（便签将在回收站存放10天）?',
+    '提示',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    }
+  ).then(() => {
+    Trash(id);
+  }).catch(() => {
+    ElMessage.info('已取消删除');
+  });
 };
 
 // 删除便签事件
 const Trash = async (id: number) => {
-    try {
-        const response = await axios.put("http://localhost:8080/Notes/Trash/Add", null, {
-            params: { id }
-        });
-        if (response.data.code === "200") {
-            ElMessage.success("便签已移到回收站");
-            fetchNotes(); // 重新获取便签列表
-        } else {
-            ElMessage.error("便签删除失败");
-        }
-    } catch (error) {
-        ElMessage.error("便签删除失败，请检查网络连接");
+  try {
+    const data: LoginResponse = await request.put('/Notes/Trash/Add', null, {
+      params: { id },
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+    if (data.code === "200") {
+      ElMessage.success("便签已移到回收站");
+      fetchNotes(); // 重新获取便签列表
+    } else {
+      ElMessage.error("便签删除失败");
     }
+  } catch (error) {
+    ElMessage.error("便签删除失败，请检查网络连接");
+  }
 };
 
 // 判断颜色是否为白色
 const isWhiteColor = (color: string) => {
-    const whiteColors = ['#ffffff', 'rgb(255, 255, 255)', 'rgba(255, 255, 255, 1)'];
-    return whiteColors.includes(color.toLowerCase());
+  const whiteColors = ['#ffffff', 'rgb(255, 255, 255)', 'rgba(255, 255, 255, 1)'];
+  return whiteColors.includes(color.toLowerCase());
 };
 
 // 获取标签样式
 const getTagClass = (color: string) => {
-    return isWhiteColor(color) ? '' : 'transparent-tag';
+  return isWhiteColor(color) ? '' : 'transparent-tag';
 };
 
 // 获取按钮样式
 const getButtonClass = (color: string) => {
-    return isWhiteColor(color) ? '' : 'transparent-button';
+  return isWhiteColor(color) ? '' : 'transparent-button';
 };
 
 // 初始化时加载数据
 onMounted(() => {
-    fetchNotes();
+  fetchNotes();
 });
 
 // 格式化文本，将换行符替换为 <br> 标签
 const formatText = (text: string) => {
-    return text.replace(/\n/g, '<br>');
+  return text.replace(/\n/g, '<br>');
 };
 
 </script>

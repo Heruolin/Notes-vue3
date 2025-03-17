@@ -1,6 +1,6 @@
 <template>
   <div class="flex card-container">
-    <div v-for="taskgroup in trashedTaskgroups" :key="taskgroup.id" class="card-item">
+    <div v-for="taskgroup in taskgroups" :key="taskgroup.id" class="card-item">
       <el-card shadow="always" class="fixed-card">
         <template #header>
           <div>
@@ -34,7 +34,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, defineEmits, computed } from "vue";
+import { ref, onMounted, defineEmits } from "vue";
 import axios from "axios";
 import { ElMessage } from 'element-plus';
 
@@ -53,7 +53,6 @@ interface Taskgroup {
   title: string;
   tasks: Task[];
   order: number;
-  status: string; // 添加 status 字段
 }
 
 // 定义事件
@@ -69,11 +68,8 @@ const restore = async (id: number) => {
       params: { id }
     });
     if (response.data && response.data.code === '200') {
-      // 更新任务组状态为 active
-      const taskgroup = taskgroups.value.find(taskgroup => taskgroup.id === id);
-      if (taskgroup) {
-        taskgroup.status = 'active';
-      }
+      // 从列表中移除已还原的任务组
+      taskgroups.value = taskgroups.value.filter(taskgroup => taskgroup.id !== id);
       ElMessage.success(`任务组还原成功`);
       // 触发父组件的事件，通知任务组已还原
       emit('taskgroupRestored', id);
@@ -103,10 +99,10 @@ const deleteTaskgroup = async (id: number) => {
   }
 };
 
-// 获取所有任务组
+// 获取数据
 const fetchTaskgroups = async () => {
   try {
-    const response = await axios.get("http://localhost:8080/Taskgroup/Taskgrouplist");
+    const response = await axios.get("http://localhost:8080/Taskgroup/Trash/Taskgrouplist");
     if (response.data && Array.isArray(response.data.data)) {
       taskgroups.value = response.data.data.sort((a, b) => b.order - a.order);
       console.log("taskgroups updated:", taskgroups.value);
@@ -132,11 +128,6 @@ const fetchTaskgroups = async () => {
     console.error("Failed to fetch taskgroups:", error);
   }
 };
-
-// 过滤出状态为 trashed 的任务组
-const trashedTaskgroups = computed(() => {
-  return taskgroups.value.filter(taskgroup => taskgroup.status === 'trashed');
-});
 
 // 初始化时加载数据
 onMounted(() => {

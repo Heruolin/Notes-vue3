@@ -101,25 +101,30 @@
               </el-menu-item>
             </el-menu-item-group>
           </el-sub-menu>
+          <!-- 注销登录 -->
+           <el-sub-menu index="logout">
+            <template #title>
+              <el-icon><Setting /></el-icon>
+              <span>注销登录</span>
+            </template>
+            </el-sub-menu>
         </el-menu>
       </el-aside>
     <!-- 主体 -->
       <el-main>
         <NotesShow v-if="currentView === 'notes'" :notes="filteredNotes" />
         <TaskShow v-if="currentView === 'Task'" :refreshTaskgroups="true" />
+        <RemindShow v-if="currentView === 'remind'" />
         <ArchiveNotesShow v-if="currentView === 'archiveNotes'" :notes="notes" />
         <ArchiveTaskShow v-if="currentView === 'archiveTask'" />
+        <ArchiveRemindShow v-if="currentView === 'archiveRemind'" />
         <TrashNotesShow v-if="currentView === 'recycleNotes'" :notes="notes" />
         <TrashTaskShow v-if="currentView === 'recycleTask'" />
-        <!-- <RemindShow v-if="currentView === 'remind'" /> -->
-        <!-- <ArchiveTaskShow v-if="currentView === 'archiveTask'" /> -->
-        <!-- <ArchiveRemindShow v-if="currentView === 'archiveRemind'" /> -->
-        <!-- <RecycleNotesShow v-if="currentView === 'recycleNotes'" /> -->
-        <!-- <RecycleTaskShow v-if="currentView === 'recycleTask'" /> -->
-        <!-- <RecycleRemindShow v-if="currentView === 'recycleRemind'" /> -->
+        <TrashRemindShow v-if="currentView === 'recycleRemind'" />
       </el-main>
     </el-container>
     <TagEdit v-model:visible="tagEditVisible" @refreshTags="fetchTags" />
+    <NotesEdit v-model:visible="dialogVisible" :data="selectedCard" @refreshNotes="fetchNotes" @refreshTags="fetchTags" @close="closeEditor" />
   </div>
 </template>
 
@@ -134,19 +139,63 @@ import {
   Expand,
   Fold,
   Tickets,
-  AlarmClock
+  AlarmClock,
+  Setting
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import axios from 'axios'
+import request from '@/utils/request'
 import NotesShow from '@/components/NotesShow.vue';
 import TagEdit from '@/components/TagEdit.vue';
 import ArchiveNotesShow from '@/components/ArchiveNotesShow.vue';
+import TaskShow from '@/components/TaskShow.vue';
+import RemindShow from '@/components/RemindShow.vue';
+import ArchiveTaskShow from '@/components/ArchiveTaskShow.vue';
+import ArchiveRemindShow from '@/components/ArchiveRemindShow.vue';
+import TrashNotesShow from '@/components/TrashNotesShow.vue';
+import TrashTaskShow from '@/components/TrashTaskShow.vue';
+import TrashRemindShow from '@/components/TrashRemindShow.vue';
+import NotesEdit from '@/components/NotesEdit.vue';
 
+interface LoginResponse {
+  code: string;
+  message: string;
+  user: {
+    userid: number;
+    username: string;
+    password: string;
+  };
+  token: string;
+  data: Array<{
+    id: number;
+    tag: string;
+  }>;
+}
+
+interface LoginResponseTag {
+  code: string;
+  message: string;
+  user: {
+    userid: number;
+    username: string;
+    password: string;
+  };
+  token: string;
+  data: {
+    data: { id: number; tag: string ;userid: number}[];
+    code: string;
+  };
+}
 // 折叠状态
 const isCollapse = ref(true);
 
 // 标签编辑对话框的显示状态
 const tagEditVisible = ref(false);
+
+// 选中的便签卡片数据
+const selectedCard = ref(null);
+
+// 便签编辑对话框的显示状态
+const dialogVisible = ref(false);
 
 // 当前显示的视图
 const currentView = ref('notes');
@@ -173,39 +222,77 @@ const filteredNotes = ref([]);
 // 获取标签数据
 const fetchTags = async () => {
   try {
-    const response = await axios.get('http://localhost:8080/Tag/Taglist')
-    if (response.data.code === '200') {
-      menuItems.value = response.data.data.map((tag: { id: number; tag: string }) => ({
+    const userId = localStorage.getItem('userId'); // 获取当前用户的userid
+    const token = localStorage.getItem('jwt_token'); // 获取存储的token
+    if (!userId || !token) {
+      ElMessage.error('用户未登录或缺少必要的认证信息');
+      return;
+    }
+
+    const response: any = await request.get('/Tag/Taglist', {
+      headers: {
+        Authorization: `Bearer ${token}` // 传递Authorization头部
+      },
+      params: {
+        userid: userId // 传递userid参数
+      }
+    });
+
+    console.log('获取到的响应数据为:', response.data);  // 输出完整的响应数据
+    
+    // 判断返回的数据是否是一个数组
+    if (Array.isArray(response.data)) {
+      menuItems.value = response.data.map((tag: { id: number; tag: string }) => ({
         index: `2-${tag.id}`,
         label: tag.tag,
         action: () => filterNotesByTag(tag.tag)
-      }))
+      }));
     } else {
-      ElMessage.error('获取标签数据失败')
+      ElMessage.error('获取标签数据失败');
     }
   } catch (error) {
-    ElMessage.error('获取标签数据失败，请检查网络连接')
+    if (error.response && error.response.status === 403) {
+      ElMessage.error('权限不足，请重新登录');
+    } else {
+      ElMessage.error('获取标签数据失败，请检查网络连接');
+    }
   }
-}
+};
+
+const selectedTag = ref<string | null>(null);
 
 // 获取便签数据
 const fetchNotes = async () => {
   try {
-    const response = await axios.get('http://localhost:8080/Notes/Noteslist')
-    if (response.data.code === '200') {
-      notes.value = response.data.data.map((item) => ({
+    const userId = localStorage.getItem('userId');
+    const data: LoginResponse = await request.get('/Notes/Noteslist', {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('token')}`
+      },
+      params: { userid: userId }
+    });
+
+    if (data.code === "200") {
+      notes.value = data.data.map((item: any) => ({
         ...item,
-        imgList: item.img ? item.img.split(",").filter((img) => img.trim() !== "") : [], // 过滤空图片
-        tagList: item.tag ? item.tag.split(",").filter((tag) => tag.trim() !== "") : [], // 过滤空标签
+        imgList: item.img ? item.img.split(",").filter(img => img.trim() !== "") : [],
+        tagList: item.tag ? item.tag.split(",").filter(tag => tag.trim() !== "") : [],
       }));
-      filteredNotes.value = [...notes.value] // 默认显示全部便签
+
+      // 重新筛选便签
+      if (currentView.value === 'notes') {
+        filteredNotes.value = notes.value.filter(note => 
+          selectedTag.value ? note.tagList.includes(selectedTag.value) : true
+        );
+      }
     } else {
-      ElMessage.error('获取便签数据失败')
+      ElMessage.error('获取便签数据失败');
     }
   } catch (error) {
-    ElMessage.error('获取便签数据失败，请检查网络连接')
+    ElMessage.error('获取便签数据失败，请检查网络连接');
   }
-}
+};
+
 
 // 在组件挂载时获取标签和便签列表
 onMounted(() => {
@@ -214,15 +301,39 @@ onMounted(() => {
 });
 
 // 显示全部便签
-const showAllNotes = () => {
+const showAllNotes = async () => {
+  await fetchNotes(); // 切换到全部便签时重新获取数据
   filteredNotes.value = [...notes.value];
   currentView.value = 'notes';
 };
 
-// 根据标签筛选便签
-const filterNotesByTag = (tag) => {
-  filteredNotes.value = notes.value.filter(note => note.tagList.includes(tag));
-  currentView.value = 'notes';
+const filterNotesByTag = async (tag: string) => {
+  selectedTag.value = tag; // 记录当前筛选的标签
+  try {
+    const userId = localStorage.getItem('userId'); // 获取当前用户的userid
+    const response: LoginResponse = await request.get('/Notes/NotesByTag', {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('token')}`
+      },
+      params: {
+        tag: tag,
+        userid: userId
+      }
+    });
+
+    if (response.code === "200") {
+      filteredNotes.value = response.data.map((item: any) => ({
+        ...item,
+        imgList: item.img ? item.img.split(",").filter(img => img.trim() !== "") : [],
+        tagList: item.tag ? item.tag.split(",").filter(tag => tag.trim() !== "") : [],
+      }));
+      currentView.value = 'notes';
+    } else {
+      ElMessage.error('根据标签筛选便签失败');
+    }
+  } catch (error) {
+    ElMessage.error('根据标签筛选便签失败，请检查网络连接');
+  }
 };
 
 // 显示清单
@@ -280,4 +391,9 @@ const handleOpen = (key: string, keyPath: string[]) => {
 const handleClose = (key: string, keyPath: string[]) => {
   console.log(key, keyPath)
 }
+// 关闭编辑器
+const closeEditor = () => {
+  dialogVisible.value = false;
+};
+
 </script>

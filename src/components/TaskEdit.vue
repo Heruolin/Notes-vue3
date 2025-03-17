@@ -19,8 +19,10 @@
                   <el-button :icon="DCaret" class="handle" />
                 </template>
                 <template #append>
-                  <el-button @click="markAsComplete(index)" :icon="Check" />
-                  <el-button @click="removeIncomplete(index)" :icon="CloseBold" />
+                  <div class="button-group">
+                    <el-button @click="markAsComplete(index)" :icon="Check" />
+                    <el-button @click="removeIncomplete(index)" :icon="CloseBold" />
+                  </div>
                 </template>
               </el-input>
             </div>
@@ -48,8 +50,10 @@
                   <el-button :icon="DCaret" class="handle" />
                 </template>
                 <template #append>
-                  <el-button @click="markAsIncomplete(index)" :icon="RefreshRight" />
-                  <el-button @click="removeComplete(index)" :icon="CloseBold" />
+                  <div class="button-group">
+                    <el-button @click="markAsIncomplete(index)" :icon="RefreshRight" />
+                    <el-button @click="removeComplete(index)" :icon="CloseBold" />
+                  </div>
                 </template>
               </el-input>
             </div>
@@ -293,5 +297,10 @@ function handleIconClick(item: { name: string; id: string }) {
   justify-content: space-between;
   gap: 10px;
   margin-top: 10px;
+}
+
+.button-group {
+  display: flex;
+  gap: 27px; /* 增加按钮之间的间距 */
 }
 </style>

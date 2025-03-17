@@ -49,6 +49,21 @@ import { ElMessage } from 'element-plus'
 import { Failed, Plus } from '@element-plus/icons-vue'
 import axios from 'axios'
 
+interface LoginResponse {
+  code: string;
+  message: string;
+  user: {
+    userid: number;
+    username: string;
+    password: string;
+  };
+  token: string;
+  data: {
+    data: { id: number; tag: string ;userid: number}[];
+    code: string;
+  };
+}
+
 // 定义接收的 props
 const props = defineProps({
   visible: Boolean,
@@ -88,7 +103,23 @@ const closeDialog = () => {
 // 获取标签数据
 const fetchTags = async () => {
   try {
-    const response = await axios.get('http://localhost:8080/Tag/Taglist')
+    const userId = localStorage.getItem('userId'); // 获取当前用户的userid
+    console.log("Fetching tags for userId:", userId);
+    const token = localStorage.getItem('jwt_token'); // 获取存储的token
+    console.log("Fetching tags for jwt_token:", token);
+    if (!userId || !token) {
+      ElMessage.error('用户未登录或缺少必要的认证信息');
+      return;
+    }
+    const response: LoginResponse = await axios.get('http://localhost:8080/Tag/Taglist', {
+      headers: {
+        Authorization: `Bearer ${token}` // 传递Authorization头部
+      },
+      params: {
+        userid: userId // 传递userid参数
+      }
+    });
+    console.log("Full response:", response);
     if (response.data.code === '200') {
       tags.value = response.data.data.map((tag: { id: number; tag: string }) => ({
         ...tag,
@@ -98,7 +129,11 @@ const fetchTags = async () => {
       ElMessage.error('获取标签数据失败')
     }
   } catch (error) {
-    ElMessage.error('获取标签数据失败，请检查网络连接')
+    if (error.response && error.response.status === 403) {
+      ElMessage.error('权限不足，请重新登录');
+    } else {
+      ElMessage.error('获取标签数据失败，请检查网络连接');
+    }
   }
 }
 
@@ -117,7 +152,17 @@ const addTag = async () => {
   }
 
   try {
-    const response = await axios.post('http://localhost:8080/Tag/TagAdd', { tag: newTag.value.trim() })
+    const userId = localStorage.getItem('userId'); // 获取当前用户的userid
+    const token = localStorage.getItem('jwt_token'); // 获取存储的token
+    if (!userId || !token) {
+      ElMessage.error('用户未登录或缺少必要的认证信息');
+      return;
+    }
+    const response: LoginResponse = await axios.post('http://localhost:8080/Tag/TagAdd', { tag: newTag.value.trim(), userid: userId }, {
+      headers: {
+        Authorization: `Bearer ${token}` // 传递Authorization头部
+      }
+    });
     if (response.data.code === '200') {
       ElMessage.success('标签添加成功')
       newTag.value = ''
@@ -127,7 +172,11 @@ const addTag = async () => {
       ElMessage.error('标签添加失败')
     }
   } catch (error) {
-    ElMessage.error('标签添加失败，请检查网络连接')
+    if (error.response && error.response.status === 403) {
+      ElMessage.error('权限不足，请重新登录');
+    } else {
+      ElMessage.error('标签添加失败，请检查网络连接');
+    }
   }
 }
 
@@ -135,7 +184,16 @@ const addTag = async () => {
 const updateTag = async (tag: { id: number; tag: string; editing: boolean }) => {
   tag.editing = false
   try {
-    const response = await axios.put('http://localhost:8080/Tag/TagUpdate', { id: tag.id, tag: tag.tag })
+    const token = localStorage.getItem('jwt_token'); // 获取存储的token
+    if (!token) {
+      ElMessage.error('用户未登录或缺少必要的认证信息');
+      return;
+    }
+    const response: LoginResponse = await axios.put('http://localhost:8080/Tag/TagUpdate', { id: tag.id, tag: tag.tag }, {
+      headers: {
+        Authorization: `Bearer ${token}` // 传递Authorization头部
+      }
+    });
     if (response.data.code === '200') {
       ElMessage.success('标签更新成功')
       emit('refreshTags') // 通知父组件刷新标签列表
@@ -143,14 +201,27 @@ const updateTag = async (tag: { id: number; tag: string; editing: boolean }) => 
       ElMessage.error('标签更新失败')
     }
   } catch (error) {
-    ElMessage.error('标签更新失败，请检查网络连接')
+    if (error.response && error.response.status === 403) {
+      ElMessage.error('权限不足，请重新登录');
+    } else {
+      ElMessage.error('标签更新失败，请检查网络连接');
+    }
   }
 }
 
 // 删除标签
 const deleteTag = async (id: number) => {
   try {
-    const response = await axios.delete(`http://localhost:8080/Tag/TagDelete/${id}`)
+    const token = localStorage.getItem('jwt_token'); // 获取存储的token
+    if (!token) {
+      ElMessage.error('用户未登录或缺少必要的认证信息');
+      return;
+    }
+    const response: LoginResponse = await axios.delete(`http://localhost:8080/Tag/TagDelete/${id}`, {
+      headers: {
+        Authorization: `Bearer ${token}` // 传递Authorization头部
+      }
+    });
     if (response.data.code === '200') {
       ElMessage.success('标签删除成功')
       tags.value = tags.value.filter(tag => tag.id !== id)
@@ -159,7 +230,11 @@ const deleteTag = async (id: number) => {
       ElMessage.error('标签删除失败')
     }
   } catch (error) {
-    ElMessage.error('标签删除失败，请检查网络连接')
+    if (error.response && error.response.status === 403) {
+      ElMessage.error('权限不足，请重新登录');
+    } else {
+      ElMessage.error('标签删除失败，请检查网络连接');
+    }
   }
 }
 </script>

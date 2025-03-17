@@ -1,6 +1,6 @@
 <template>
   <div class="flex card-container">
-    <div v-for="taskgroup in taskgroups" :key="taskgroup.id" class="card-item">
+    <div v-for="taskgroup in archivedTaskgroups" :key="taskgroup.id" class="card-item">
       <el-card shadow="always" class="fixed-card">
         <template #header>
           <div>
@@ -33,7 +33,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, defineEmits } from "vue";
+import { ref, onMounted, defineEmits, computed } from "vue";
 import axios from "axios";
 import { ElMessage } from 'element-plus';
 
@@ -52,6 +52,7 @@ interface Taskgroup {
   title: string;
   tasks: Task[];
   order: number;
+  status: string; // 添加 status 字段
 }
 
 // 定义事件
@@ -109,6 +110,11 @@ const fetchTaskgroups = async () => {
     console.error("Failed to fetch taskgroups:", error);
   }
 };
+
+// 过滤出状态为 archived 的任务组
+const archivedTaskgroups = computed(() => {
+  return taskgroups.value.filter(taskgroup => taskgroup.status === 'archived');
+});
 
 // 初始化时加载数据
 onMounted(() => {

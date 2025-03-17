@@ -1,107 +1,107 @@
 <template>
-    <div style="height: 100vh; display: flex; align-items: center; justify-content: center;background-color: rgb(148.6, 212.3, 117.1);">
-        <div style="display: flex; background-color: white; width: 50%; border-radius: 5px; overflow: hidden;">
-            <div style="flex: 1;">
-                <img src="../assets/index.jpg" alt="" style="width:100%">
-            </div>
-            <div style="flex: 1; display: flex; align-items: center; justify-content: center;">
-              <el-form ref="userRef" :model="user" style="width:80%" status-icon :rules="rules" label-width="auto" class="demo-user">
-                <div style="font-size: 20px; font-weight: bold; text-align: center; margin-bottom: 20px;">便签系统</div>
-                <el-form-item label="帐号" prop="username">
-                  <el-input prefix-icon="User" size="default" placeholder="请输入帐号" v-model="user.username" autocomplete="off" />
-                </el-form-item>
-                <el-form-item  label="密码" prop="password">
-                  <el-input show-password prefix-icon="Lock" size="default" placeholder="请输入密码" v-model="user.password" autocomplete="off"/>
-                </el-form-item>
-                <!-- <el-form-item label="验证码" prop="validCode">
-                  <div style="display: flex;">
-                    <el-input prefix-icon="Check" size="default" style="flex: 1"  placeholder="请输入验证码"  v-model="user.validCode" autocomplete="off"/>
-                    <div style="flex: 1;height: 36px;">
-                      <ValidCode ref="childCode"/>
-                    </div>
-                  </div>
-                </el-form-item> -->
-                <el-form-item>
-                  <el-button type="primary" style="width: 100%;" @click="submitForm(userRef)">登录</el-button>
-                </el-form-item>
-                <div>还没有帐号？请<span style="color: #0f9876; cursor: pointer;">注册</span></div>
-              </el-form>
-            </div>
-        </div>
+  <div
+    style="height: 100vh; display: flex; align-items: center; justify-content: center;background-color: rgb(148.6, 212.3, 117.1);">
+    <div style="display: flex; background-color: white; width: 50%; border-radius: 5px; overflow: hidden;">
+      <div style="flex: 1;">
+        <img src="../assets/logo.png" alt="" style="width:100%">
+      </div>
+      <div style="flex: 1; display: flex; align-items: center; justify-content: center;">
+        <el-form ref="userRef" :model="user" style="width:80%" status-icon :rules="rules" label-width="auto"
+          class="demo-user">
+          <div style="font-size: 20px; font-weight: bold; text-align: center; margin-bottom: 20px;">便签系统</div>
+          <el-form-item label="帐号" prop="username">
+            <el-input prefix-icon="User" size="default" placeholder="请输入帐号" v-model="user.username"
+              autocomplete="off" />
+          </el-form-item>
+          <el-form-item label="密码" prop="password">
+            <el-input show-password prefix-icon="Lock" size="default" placeholder="请输入密码" v-model="user.password"
+              autocomplete="off" />
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" style="width: 100%;" @click="submitForm(userRef)" :loading="isSubmitting">登录</el-button>
+          </el-form-item>
+          <div>还没有帐号？请<span style="color: #0f9876; cursor: pointer;" @click="goToRegister">注册</span></div>
+        </el-form>
+      </div>
     </div>
+  </div>
 </template>
+
 <script lang="ts" setup>
 import { ref, reactive } from 'vue'
-import ValidCode from '@/components/ValidCode.vue'
+import { useRouter } from 'vue-router'
 import type { FormInstance, FormRules } from 'element-plus'
-import request from '@/utils/request' 
+import request from '@/utils/request'
 
 const userRef = ref<FormInstance>()
+const router = useRouter()
 
-const validateUser = (rule: any, value: any, callback: any) => {
-  if (value === '') {
-    callback(new Error('请输入帐号'))
-  } else {
-    // 异步验证
-    request.post('/login', user)
-      .then(res => {
-        console.log(res);
-        callback(); // 验证成功，调用 callback
-      })
-      .catch(error => {
-        callback(new Error('帐号或密码错误')); // 验证失败，调用 callback 并传入错误
-      });
-  }
+interface LoginResponse {
+  code: string;
+  message: string;
+  user: {
+    userid: number;
+    username: string;
+    password: string;
+  };
+  token: string;
 }
 
-const validatePass = (rule: any, value: any, callback: any) => {
-  if (value === '') {
-    callback(new Error('请输入密码'))
-  } else {
-    callback()
-  }
-}
+// 用于防止重复提交
+const isSubmitting = ref(false);
 
-const getCode = (code) => {
-  console.log(code)
-  user.validCode = code 
-}
-
-const validateCode = (rule: any, value: any, callback: any) => {
-  if (value === '') {
-    callback(new Error('请输入验证码'))
-  } else if (value !== user.validCode) {
-    callback(new Error('验证码错误'))
-  } else {
-    callback()
-  }
-}
-
-const user= reactive({
+const user = reactive({
   username: '',
   password: '',
-  validCode: '',
 })
 
 const rules = reactive<FormRules<typeof user>>({
-  username: [{ validator: validateUser, trigger: 'blur' }],
-  password: [{ validator: validatePass, trigger: 'blur' }],
-  validCode: [{ validator: validateCode, trigger: 'blur' }],
+  username: [{ required: true, message: '请输入帐号', trigger: 'blur' }],
+  password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
 })
 
-const submitForm = (formEl: FormInstance | undefined) => {
-  if (!formEl) return
-  formEl.validate((valid) => {
+const submitForm = async (formEl: FormInstance | undefined) => {
+  if (!formEl || isSubmitting.value) return; // 防止重复提交
+
+  await formEl.validate(async (valid) => {
     if (valid) {
-      console.log('submit!')
-    } else {
-      console.log('error submit!')
+      isSubmitting.value = true;  // 启动加载状态，防止重复点击
+
+      try {
+        const data: LoginResponse = await request.post('/user/login', user); // 登录请求
+        console.log('后端返回数据:', data);
+
+        if (data.code === "200") { // 登录成功
+          // 将 JWT Token 存储到 localStorage 中
+          const token = data.token;
+          localStorage.setItem('jwt_token', token); // 存储 Token
+          localStorage.setItem('user', JSON.stringify(data.user)); // 存储用户信息
+          // 存储用户的 UserId
+          const userId = data.user.userid;
+          localStorage.setItem('userId', userId.toString()); // 存储 UserId
+
+          // 跳转到首页
+          router.push('/index');
+          console.log("✅ 存储的 Token:", token);
+          console.log("✅ 存储的 userid:", userId);
+        } else {
+          console.error('登录失败:', data.message);
+        }
+      } catch (error) {
+        console.error('请求失败:', error.message || '服务器错误');
+      } finally {
+        isSubmitting.value = false;  // 重置加载状态
+      }
     }
-  })
+  });
+};
+
+const goToRegister = () => {
+  router.push('/register')
 }
 </script>
-<style lang="scss" scoped>
 
+<style lang="scss" scoped>
 .login-page {
   border: 1.5px solid rgb(123, 109, 30);
   border-radius: 8px;
@@ -109,10 +109,12 @@ const submitForm = (formEl: FormInstance | undefined) => {
   margin: 0 auto;
   margin-top: 50px;
   padding: 20px;
+
   .code {
     text-align: center;
     margin-bottom: 10px;
   }
+
   .login_btn {
     width: 100%;
   }

@@ -13,6 +13,7 @@
     </div>
     <NotesEdit v-model:visible="dialogVisible" @close="closeEditor" @refreshNotes="refreshNotes" />
     <TaskEdit v-model:visible="taskDialogVisible" @close="closeTaskEditor" @refreshTaskgroups="refreshTaskgroups" />
+    <RemindEdit v-model:visible="remindDialogVisible" @close="closeRemindEditor" @refreshRemind="refreshRemind" />
   </template>
   
   <script setup lang="ts">
@@ -20,15 +21,17 @@
   import { Plus, Tickets, AlarmClock } from '@element-plus/icons-vue';
   import NotesEdit from "./NotesEdit.vue";
   import TaskEdit from "./TaskEdit.vue";
+  import RemindEdit from "./RemindEdit.vue";
   import axios from "axios";
   
   const isDragging = ref(false);
   const showSubButtons = ref(false); 
   const dialogVisible = ref(false);
   const taskDialogVisible = ref(false);
+  const remindDialogVisible = ref(false);
   
   // 定义 emit 事件
-  const emit = defineEmits(['update:visible', 'close', 'refreshNotes', 'refreshTaskgroups']);
+const emit = defineEmits(['update:visible', 'close', 'refreshNotes', 'refreshTaskgroups', 'refreshRemind']);
   
   const refreshNotes = () => {
       emit('refreshNotes');
@@ -36,6 +39,10 @@
   
   const refreshTaskgroups = () => {
       emit('refreshTaskgroups');
+  };
+  
+  const refreshRemind = () => {
+      emit('refreshRemind');
   };
   
   // 添加便签按钮
@@ -51,8 +58,8 @@
   };
   // 添加提醒按钮
   const handleRemind = () => {
-      resetNoteData(); // 重置提醒数据
-      dialogVisible.value = true;
+      resetRemindData(); // 重置提醒数据
+      remindDialogVisible.value = true;
   };
   const closeEditor = () => {
       dialogVisible.value = false;
@@ -61,6 +68,11 @@
   const closeTaskEditor = () => {
       taskDialogVisible.value = false;
       refreshTaskgroups(); // 关闭编辑页后刷新任务组列表
+  };
+  
+  const closeRemindEditor = () => {
+      remindDialogVisible.value = false;
+      refreshRemind(); // 关闭编辑页后刷新提醒列表
   };
   
   // 侧边栏拖拽功能
@@ -118,6 +130,13 @@
       }
   };
 
+  const resetRemindData = () => {
+      // 触发 RemindEdit 组件中的 resetRemindData 方法
+      const remindEditComponent = document.querySelector('RemindEdit') as any;
+      if (remindEditComponent && remindEditComponent.resetRemindData) {
+          remindEditComponent.resetRemindData();
+      }
+  }
   </script>
   
 

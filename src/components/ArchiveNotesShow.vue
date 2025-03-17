@@ -48,6 +48,17 @@ interface Notecard {
     imgList: string[];
     tagList: string[];
 }
+interface LoginResponse {
+  code: string;
+  message: string;
+  user: {
+    userid: number;
+    username: string;
+    password: string;
+  };
+  token: string;
+  data: Notecard[];
+}
 
 // 接收父组件传递的 notes 属性
 const props = defineProps<{ notes: Notecard[] }>();
@@ -61,17 +72,17 @@ const list = ref<Notecard[]>(props.notes);
 // 还原便签事件
 const restore = async (id: number) => {
     try {
-        const response = await axios.put(`http://localhost:8080/Notes/Archive/Restore`, null, {
+        const response:LoginResponse = await axios.put(`http://localhost:8080/Notes/Archive/Restore`, null, {
             params: { id }
         });
-        if (response.data && response.data.code === '200') {
+        if (response.data && response.code === '200') {
             // 从列表中移除已还原的便签
             list.value = list.value.filter(item => item.id !== id);
             ElMessage.success(`便签还原成功`);
             // 触发父组件的事件，通知便签已还原
             emit('noteRestored', id);
         } else {
-            console.error("Failed to restore note:", response.data.message);
+            console.error("Failed to restore note:", response.message);
         }
     } catch (error) {
         console.error("Error restoring note:", error);
@@ -80,21 +91,34 @@ const restore = async (id: number) => {
 
 // 获取数据
 const fetchNotes = async () => {
-    try {
-        const response = await axios.get("http://localhost:8080/Notes/Archive/Noteslist");
-        if (response.data && Array.isArray(response.data.data)) {
-            list.value = response.data.data.map((item) => ({
-                ...item,
-                imgList: item.img ? item.img.split(",") : [],
-                tagList: item.tag ? item.tag.split(",") : [],
-            })).sort((a, b) => b.order - a.order);
-            console.log("list updated:", list.value); 
-        } else {
-            console.error("Unexpected response format:", response.data);
-        }
-    } catch (error) {
-        console.error("Failed to fetch notes:", error);
+  try {
+    const userId = localStorage.getItem('userId'); // 获取当前用户的userid
+    const token = localStorage.getItem('jwt_token'); // 获取存储的token
+    if (!userId || !token) {
+      ElMessage.error('用户未登录或缺少必要的认证信息');
+      return;
     }
+    const response: LoginResponse = await axios.get("http://localhost:8080/Notes/Archive/Noteslist", {
+      headers: {
+        Authorization: `Bearer ${token}` // 传递Authorization头部
+      },
+      params: {
+        userid: userId // 传递userid参数
+      }
+    });
+    if (response.data && Array.isArray(response.data)) {
+      list.value = response.data.map((item) => ({
+        ...item,
+        imgList: item.img ? item.img.split(",") : [],
+        tagList: item.tag ? item.tag.split(",") : [],
+      })).sort((a, b) => b.order - a.order);
+      console.log("list updated:", list.value); 
+    } else {
+      console.error("Unexpected response format:", response.data);
+    }
+  } catch (error) {
+    console.error("Failed to fetch notes:", error);
+  }
 };
 
 // 初始化时加载数据

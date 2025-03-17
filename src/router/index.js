@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
   {
-    path: '/',
+    path: '/index',
     name: 'index',
     component: () => import('../views/Index.vue'),
   },
@@ -45,6 +45,16 @@ const routes = [
     path: '/TaskShow',
     name: 'TaskShow',
     component: () => import('../components/TaskShow.vue'),
+  },
+  {
+    path:'/RemindShow',
+    name:'RemindShow',
+    component:()=>import('../components/RemindShow.vue')
+  },
+  {
+    path:'/RemindEdit',
+    name:'RemindEdit',
+    component:()=>import('../components/RemindEdit.vue')
   }
 ]
 
