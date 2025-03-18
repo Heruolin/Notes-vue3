@@ -16,6 +16,7 @@
 
     <template #footer>
       <div>
+        <el-button v-if="localData.id" @click="resetRemindData">重置</el-button>
         <el-button @click="saveRemind">保存</el-button>
       </div>
     </template>
@@ -59,8 +60,16 @@ watch(
 
 const saveRemind = async () => {
   try {
+    const token = localStorage.getItem("jwt_token"); // 获取存储的 token
+    const userId = localStorage.getItem("userId"); // 获取存储的用户ID
+    if (!token || !userId) {
+      console.error("用户未登录或缺少必要的认证信息");
+      return;
+    }
+
     const remindData = {
       id: localData.value.id,
+      userid: userId, // 注入当前用户的 userid
       text: localData.value.text,
       remindTime: localData.value.remindTime,
       order: localData.value.order,
@@ -69,11 +78,16 @@ const saveRemind = async () => {
 
     let response;
     if (remindData.id) {
-      response = await axios.put('http://localhost:8080/Remind/RemindUpdate', remindData);
+      // 更新提醒
+      response = await axios.put('http://localhost:8080/Remind/RemindUpdate', remindData, {
+        headers: { Authorization: `Bearer ${token}` } // 携带 Authorization 头部
+      });
     } else {
       // 新添加的提醒默认排在最前面
       remindData.order = -1;
-      response = await axios.post('http://localhost:8080/Remind/RemindAdd', remindData);
+      response = await axios.post('http://localhost:8080/Remind/RemindAdd', remindData, {
+        headers: { Authorization: `Bearer ${token}` } // 携带 Authorization 头部
+      });
     }
 
     if (response.data.code === '200') {
@@ -89,15 +103,35 @@ const saveRemind = async () => {
 };
 
 // 重置提醒数据
-const resetRemindData = () => {
-  localData.value = {
-    id: null,
-    userid: null,
-    text: '',
-    remindTime: '',
-    order: 0,
-    status: '未提醒' // 重置时默认状态为未提醒
-  };
+const resetRemindData = async () => {
+  try {
+    const token = localStorage.getItem("jwt_token"); // 获取存储的 token
+    if (!token) {
+      console.error("用户未登录或缺少必要的认证信息");
+      return;
+    }
+
+    if (localData.value.id) {
+      // 如果提醒存在 ID，则更新状态为 "未提醒"
+      localData.value.status = "未提醒";
+      await axios.put("http://localhost:8080/Remind/RemindUpdate", localData.value, {
+        headers: { Authorization: `Bearer ${token}` } // 携带 Authorization 头部
+      });
+      console.log("提醒状态已重置为未提醒");
+    } else {
+      // 如果是新提醒，直接重置数据
+      localData.value = {
+        id: null,
+        userid: null,
+        text: '',
+        remindTime: '',
+        order: 0,
+        status: '未提醒' // 重置时默认状态为未提醒
+      };
+    }
+  } catch (error) {
+    console.error("重置提醒状态失败:", error);
+  }
 };
 </script>
 

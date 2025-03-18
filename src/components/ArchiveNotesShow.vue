@@ -72,19 +72,27 @@ const list = ref<Notecard[]>(props.notes);
 // 还原便签事件
 const restore = async (id: number) => {
     try {
-        const response:LoginResponse = await axios.put(`http://localhost:8080/Notes/Archive/Restore`, null, {
+        const token = localStorage.getItem('jwt_token'); // 获取存储的 token
+        if (!token) {
+            ElMessage.error('用户未登录或缺少必要的认证信息');
+            return;
+        }
+        const response = await axios.put(`http://localhost:8080/Notes/Archive/Restore`, null, {
+            headers: {
+                Authorization: `Bearer ${token}` // 传递 Authorization 头部
+            },
             params: { id }
         });
-        if (response.data && response.code === '200') {
+        if (response.data && response.data.code === '200') {
             // 从列表中移除已还原的便签
             list.value = list.value.filter(item => item.id !== id);
             ElMessage.success(`便签还原成功`);
-            // 触发父组件的事件，通知便签已还原
-            emit('noteRestored', id);
+            emit('noteRestored', id); // 通知父组件便签已还原
         } else {
-            console.error("Failed to restore note:", response.message);
+            ElMessage.error(response.data.message || '便签还原失败');
         }
     } catch (error) {
+        ElMessage.error('便签还原失败，请检查网络连接');
         console.error("Error restoring note:", error);
     }
 };
@@ -98,7 +106,8 @@ const fetchNotes = async () => {
       ElMessage.error('用户未登录或缺少必要的认证信息');
       return;
     }
-    const response: LoginResponse = await axios.get("http://localhost:8080/Notes/Archive/Noteslist", {
+
+    const response = await axios.get("http://localhost:8080/Notes/Archive/Noteslist", {
       headers: {
         Authorization: `Bearer ${token}` // 传递Authorization头部
       },
@@ -106,18 +115,23 @@ const fetchNotes = async () => {
         userid: userId // 传递userid参数
       }
     });
-    if (response.data && Array.isArray(response.data)) {
-      list.value = response.data.map((item) => ({
+
+    console.log("归档response:", response.data);
+
+    // 确保 response.data.data 是数组
+    if (response.data.code == 200 && Array.isArray(response.data.data)) {
+      list.value = response.data.data.map((item) => ({
         ...item,
         imgList: item.img ? item.img.split(",") : [],
         tagList: item.tag ? item.tag.split(",") : [],
       })).sort((a, b) => b.order - a.order);
-      console.log("list updated:", list.value); 
     } else {
       console.error("Unexpected response format:", response.data);
+      ElMessage.error('获取归档便签数据失败');
     }
   } catch (error) {
     console.error("Failed to fetch notes:", error);
+    ElMessage.error('获取归档便签数据失败，请检查网络连接');
   }
 };
 

@@ -8,7 +8,7 @@
           </div>
         </template>
         <div>
-          <h1 class="centered-title">{{ item.text }}</h1>
+          {{ item.text }}
         </div>
         <template #footer>
           <div class="flex justify-start gap-2" style="margin-top: 10px;">
@@ -46,8 +46,11 @@ const list = ref<Remindcard[]>([]);
 // 还原提醒事件
 const restore = async (id: number) => {
   try {
+    const token = localStorage.getItem("jwt_token"); // 获取存储的 token
+    const userId = localStorage.getItem("user_id"); // 获取存储的 user_id
     const response = await axios.put(`http://localhost:8080/Remind/Archive/Restore`, null, {
-      params: { id }
+      params: { id },
+      headers: { Authorization: `Bearer ${token}` } // 携带 Authorization 头部
     });
     if (response.data && response.data.code === '200') {
       // 从列表中移除已还原的提醒
@@ -66,7 +69,17 @@ const restore = async (id: number) => {
 // 获取数据
 const fetchReminds = async () => {
   try {
-    const response = await axios.get("http://localhost:8080/Remind/Archive/Remindlist");
+    const token = localStorage.getItem("jwt_token"); // 获取存储的 token
+    const userId = localStorage.getItem("userId"); // 获取存储的用户ID
+    if (!token || !userId) {
+      ElMessage.error('用户未登录或缺少必要的认证信息');
+      return;
+    }
+
+    const response = await axios.get("http://localhost:8080/Remind/Archive/Remindlist", {
+      params: { userid: userId }, // 携带用户ID
+      headers: { Authorization: `Bearer ${token}` } // 携带 Authorization 头部
+    });
     if (response.data && Array.isArray(response.data.data)) {
       list.value = response.data.data.sort((a, b) => b.order - a.order);
       console.log("Reminds loaded:", list.value);

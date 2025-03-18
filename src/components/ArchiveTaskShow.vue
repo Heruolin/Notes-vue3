@@ -60,12 +60,19 @@ const emit = defineEmits(['taskgroupRestored']);
 
 // 初始化 taskgroups
 const taskgroups = ref<Taskgroup[]>([]);
-
+//token
+const token = localStorage.getItem('token');
 // 还原任务组事件
 const restore = async (id: number) => {
   try {
+    const token = localStorage.getItem("jwt_token"); // 获取存储的 token
+    if (!token) {
+      ElMessage.error('用户未登录或缺少必要的认证信息');
+      return;
+    }
     const response = await axios.put(`http://localhost:8080/Taskgroup/Archive/Restore`, null, {
-      params: { id }
+      params: { id },
+      headers: { Authorization: `Bearer ${token}` } // 携带 Authorization 头部
     });
     if (response.data && response.data.code === '200') {
       // 从列表中移除已还原的任务组
@@ -84,13 +91,22 @@ const restore = async (id: number) => {
 // 获取数据
 const fetchTaskgroups = async () => {
   try {
-    const response = await axios.get("http://localhost:8080/Taskgroup/Archive/Taskgrouplist");
+    const token = localStorage.getItem("jwt_token"); // 获取存储的 token
+    if (!token) {
+      ElMessage.error('用户未登录或缺少必要的认证信息');
+      return;
+    }
+
+    const response = await axios.get("http://localhost:8080/Taskgroup/Archive/Taskgrouplist", {
+      headers: { Authorization: `Bearer ${token}` } // 携带 Authorization 头部
+    });
     if (response.data && Array.isArray(response.data.data)) {
       taskgroups.value = response.data.data.sort((a, b) => b.order - a.order);
       console.log("taskgroups updated:", taskgroups.value);
       // 获取每个任务组的任务
       for (const taskgroup of taskgroups.value) {
         const taskResponse = await axios.get("http://localhost:8080/Task/Tasklist", {
+          headers: { Authorization: `Bearer ${token}` }, // 携带 Authorization 头部
           params: { taskgroupId: taskgroup.id }
         });
         if (taskResponse.data && Array.isArray(taskResponse.data.data)) {

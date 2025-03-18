@@ -2,7 +2,7 @@
     <div class="flex">
         <VueDraggable ref="el" v-model="list" :animation="150" ghost-class="ghost" class="card-container"
             @start="onStart" @update="onUpdate" @end="onEnd">
-            <div v-for="item in list" :key="item.id" class="card-item" @click="openEditor(item)">
+            <div v-if="list.length > 0" v-for="item in list" :key="item.id" class="card-item" @click="openEditor(item)">
                 <el-card shadow="always" :style="{ backgroundColor: item.color }" class="fixed-card">
                     <template #header>
                         <div v-for="(img, index) in item.imgList" :key="index" class="card-header">
@@ -73,8 +73,8 @@ interface LoginResponse {
 // 接收父组件传递的 notes 属性
 const props = defineProps<{ notes: Notecard[] }>();
 
-// 初始化 list
-const list = ref<Notecard[]>(props.notes);
+// 初始化 list，确保非空
+const list = ref<Notecard[]>([]);
 
 // 监听 props.notes 的变化并更新 list
 watch(() => props.notes, (newNotes) => {
@@ -246,8 +246,8 @@ onMounted(() => {
 });
 
 // 格式化文本，将换行符替换为 <br> 标签
-const formatText = (text: string) => {
-  return text.replace(/\n/g, '<br>');
+const formatText = (text: string | null | undefined) => {
+  return (text || '').replace(/\n/g, '<br>'); // 确保 text 为字符串
 };
 
 </script>
@@ -290,5 +290,12 @@ const formatText = (text: string) => {
 /* 标题居中样式 */
 .centered-title {
     text-align: center;
+}
+
+.empty-state {
+    text-align: center;
+    font-size: 18px;
+    color: #999;
+    margin-top: 20px;
 }
 </style>

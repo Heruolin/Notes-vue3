@@ -79,7 +79,8 @@ interface Taskgroup {
 
 // 初始化 taskgroups
 const taskgroups = ref<Taskgroup[]>([]);
-
+// token
+const token = localStorage.getItem("token");
 // 卡片点击事件
 const dialogVisible = ref(false);
 
@@ -88,15 +89,29 @@ const selectedTaskgroup = ref<Taskgroup | null>(null);
 
 const fetchTaskgroups = async () => {
   try {
-    const response = await axios.get("http://localhost:8080/Taskgroup/Taskgrouplist");
+    const token = localStorage.getItem("jwt_token"); // 获取存储的 token
+    const userId = localStorage.getItem("userId"); // 获取存储的用户ID
+    if (!token || !userId) {
+      ElMessage.error('用户未登录或缺少必要的认证信息');
+      return;
+    }
+
+    const response = await axios.get("http://localhost:8080/Taskgroup/Taskgrouplist", {
+      headers: { Authorization: `Bearer ${token}` }, // 携带 Authorization 头部
+      params: { userid: userId } // 传递用户ID
+    });
+
     if (response.data && Array.isArray(response.data.data)) {
       taskgroups.value = response.data.data.sort((a, b) => a.order - b.order); // 确保 taskgroups 按 order 排序
       console.log("Taskgroups loaded:", taskgroups.value);
+
       // 获取每个任务组的任务
       for (const taskgroup of taskgroups.value) {
         const taskResponse = await axios.get("http://localhost:8080/Task/Tasklist", {
+          headers: { Authorization: `Bearer ${token}` }, // 携带 Authorization 头部
           params: { taskgroupId: taskgroup.id }
         });
+
         if (taskResponse.data && Array.isArray(taskResponse.data.data)) {
           taskgroup.tasks = taskResponse.data.data.sort((a, b) => a.order - b.order); // 确保 tasks 按 order 排序
         } else {
@@ -132,11 +147,19 @@ watch(() => props.refreshTaskgroups, refreshTaskgroups);
 // 拖拽结束事件，更新顺序
 const onEnd = async () => {
   try {
+    const token = localStorage.getItem("jwt_token"); // 获取存储的 token
+    if (!token) {
+      ElMessage.error('用户未登录或缺少必要的认证信息');
+      return;
+    }
+
     const newOrder = taskgroups.value.map((item, index) => ({
       id: item.id,
       order: index, // 设置新的顺序
     }));
-    await axios.put("http://localhost:8080/Taskgroup/UpdateOrder", newOrder);
+    await axios.put("http://localhost:8080/Taskgroup/UpdateOrder", newOrder, {
+      headers: { Authorization: `Bearer ${token}` } // 携带 Authorization 头部
+    });
     console.log("Order updated successfully!");
   } catch (error) {
     console.error("Failed to update order:", error);
@@ -171,7 +194,14 @@ const closeEditor = () => {
 // 归档事件
 const archiveTaskgroup = async (id: number) => {
   try {
+    const token = localStorage.getItem("jwt_token"); // 获取存储的 token
+    if (!token) {
+      ElMessage.error('用户未登录或缺少必要的认证信息');
+      return;
+    }
+
     const response = await axios.put("http://localhost:8080/Taskgroup/Archive/Add", null, {
+      headers: { Authorization: `Bearer ${token}` }, // 携带 Authorization 头部
       params: { id }
     });
     if (response.data.code === "200") {
@@ -205,7 +235,14 @@ const confirmTrash = (id: number) => {
 // 删除任务组事件
 const trashTaskgroup = async (id: number) => {
   try {
+    const token = localStorage.getItem("jwt_token"); // 获取存储的 token
+    if (!token) {
+      ElMessage.error('用户未登录或缺少必要的认证信息');
+      return;
+    }
+
     const response = await axios.put("http://localhost:8080/Taskgroup/Trash/Add", null, {
+      headers: { Authorization: `Bearer ${token}` }, // 携带 Authorization 头部
       params: { id }
     });
     if (response.data.code === "200") {
@@ -223,6 +260,7 @@ const trashTaskgroup = async (id: number) => {
 const removeTask = async (taskgroupId: number, taskId: number) => {
   try {
     await axios.delete("http://localhost:8080/Task/TaskDelete", {
+      headers: { Authorization: `Bearer ${token}` },
       params: { id: taskId }
     });
     const taskgroup = taskgroups.value.find(group => group.id === taskgroupId);

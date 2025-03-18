@@ -102,23 +102,31 @@
             </el-menu-item-group>
           </el-sub-menu>
           <!-- 注销登录 -->
-           <el-sub-menu index="logout">
+           <el-sub-menu index="setting">
             <template #title>
               <el-icon><Setting /></el-icon>
-              <span>注销登录</span>
+              <span>设置</span>
             </template>
+            <el-menu-item-group>
+              <el-menu-item index="logout" @click="logout">
+                退出登录
+              </el-menu-item>
+            </el-menu-item-group>
             </el-sub-menu>
         </el-menu>
       </el-aside>
     <!-- 主体 -->
       <el-main>
         <NotesShow v-if="currentView === 'notes'" :notes="filteredNotes" />
+        <div v-else-if="currentView === 'notes' && filteredNotes.length === 0" class="empty-state">暂无便签</div>
         <TaskShow v-if="currentView === 'Task'" :refreshTaskgroups="true" />
         <RemindShow v-if="currentView === 'remind'" />
         <ArchiveNotesShow v-if="currentView === 'archiveNotes'" :notes="notes" />
+        <div v-else-if="currentView === 'archiveNotes' && notes.length === 0" class="empty-state">暂无归档便签</div>
+        <TrashNotesShow v-if="currentView === 'recycleNotes'" :notes="notes" />
+        <div v-else-if="currentView === 'recycleNotes' && notes.length === 0" class="empty-state">暂无回收站便签</div>
         <ArchiveTaskShow v-if="currentView === 'archiveTask'" />
         <ArchiveRemindShow v-if="currentView === 'archiveRemind'" />
-        <TrashNotesShow v-if="currentView === 'recycleNotes'" :notes="notes" />
         <TrashTaskShow v-if="currentView === 'recycleTask'" />
         <TrashRemindShow v-if="currentView === 'recycleRemind'" />
       </el-main>
@@ -131,6 +139,7 @@
 <script lang="ts" setup>
 
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import {
   EditPen,
   House,
@@ -271,7 +280,7 @@ const fetchNotes = async () => {
       },
       params: { userid: userId }
     });
-
+    console.log('获取到的便签code为:', data.code);
     if (data.code === "200") {
       notes.value = data.data.map((item: any) => ({
         ...item,
@@ -347,8 +356,29 @@ const showRemind = () => {
 };
 
 // 显示归档便签
-const showArchiveNotes = () => {
-  currentView.value = 'archiveNotes';
+const showArchiveNotes = async () => {
+  try {
+    const userId = localStorage.getItem('userId'); // 确保 userId 存在
+    const response: LoginResponse = await request.get('/Notes/Archive/Noteslist', {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('token')}`
+      },
+      params: { userid: userId }
+    });
+
+    if (response.code === "200") {
+      notes.value = response.data.map((item: any) => ({
+        ...item,
+        imgList: item.img ? item.img.split(",").filter(img => img.trim() !== "") : [],
+        tagList: item.tag ? item.tag.split(",").filter(tag => tag.trim() !== "") : [],
+      }));
+      currentView.value = 'archiveNotes';
+    } else {
+      ElMessage.error('获取归档便签数据失败');
+    }
+  } catch (error) {
+    ElMessage.error('获取归档便签数据失败，请检查网络连接');
+  }
 };
 
 // 显示归档清单
@@ -362,8 +392,29 @@ const showArchiveRemind = () => {
 };
 
 // 显示回收站便签
-const showRecycleNotes = () => {
-  currentView.value = 'recycleNotes';
+const showRecycleNotes = async () => {
+  try {
+    const userId = localStorage.getItem('userId'); // 获取当前用户的 userid
+    const response: LoginResponse = await request.get('/Notes/Trash/Noteslist', {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('jwt_token')}` // 传递 Authorization 头部
+      },
+      params: { userid: userId } // 传递 userid 参数
+    });
+
+    if (response.code === "200") {
+      notes.value = response.data.map((item: any) => ({
+        ...item,
+        imgList: item.img ? item.img.split(",").filter(img => img.trim() !== "") : [],
+        tagList: item.tag ? item.tag.split(",").filter(tag => tag.trim() !== "") : [],
+      }));
+      currentView.value = 'recycleNotes';
+    } else {
+      ElMessage.error('获取回收站便签数据失败');
+    }
+  } catch (error) {
+    ElMessage.error('获取回收站便签数据失败，请检查网络连接');
+  }
 };
 
 // 显示回收站清单
@@ -395,5 +446,15 @@ const handleClose = (key: string, keyPath: string[]) => {
 const closeEditor = () => {
   dialogVisible.value = false;
 };
+// 退出登录
+const router = useRouter(); // 初始化 router 实例
+const logout = () => {
+  localStorage.removeItem('jwt_token'); // 清除存储的 Token
+  localStorage.removeItem('user'); // 清除用户信息
+  localStorage.removeItem('userId'); // 清除 UserId
+  ElMessage.success('退出登录成功');
+  router.push('/login'); // 跳转到登录页面
+};
 
 </script>
+

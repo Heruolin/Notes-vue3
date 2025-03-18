@@ -47,8 +47,15 @@ const list = ref<Remindcard[]>([]);
 // 还原提醒事件
 const restore = async (id: number) => {
   try {
+    const token = localStorage.getItem("jwt_token"); // 获取存储的 token
+    if (!token) {
+      ElMessage.error('用户未登录或缺少必要的认证信息');
+      return;
+    }
+
     const response = await axios.put(`http://localhost:8080/Remind/Trash/Restore`, null, {
-      params: { id }
+      params: { id },
+      headers: { Authorization: `Bearer ${token}` } // 携带 Authorization 头部
     });
     if (response.data && response.data.code === '200') {
       // 从列表中移除已还原的提醒
@@ -67,8 +74,15 @@ const restore = async (id: number) => {
 // 删除提醒事件
 const deleteRemind = async (id: number) => {
   try {
+    const token = localStorage.getItem("jwt_token"); // 获取存储的 token
+    if (!token) {
+      ElMessage.error('用户未登录或缺少必要的认证信息');
+      return;
+    }
+
     const response = await axios.delete(`http://localhost:8080/Remind/Trash/Delete`, {
-      params: { id }
+      params: { id },
+      headers: { Authorization: `Bearer ${token}` } // 携带 Authorization 头部
     });
     if (response.data && response.data.code === '200') {
       // 从列表中移除已删除的提醒
@@ -85,7 +99,17 @@ const deleteRemind = async (id: number) => {
 // 获取数据
 const fetchReminds = async () => {
   try {
-    const response = await axios.get("http://localhost:8080/Remind/Trash/Remindlist");
+    const token = localStorage.getItem("jwt_token"); // 获取存储的 token
+    const userId = localStorage.getItem("userId"); // 获取存储的用户ID
+    if (!token || !userId) {
+      ElMessage.error('用户未登录或缺少必要的认证信息');
+      return;
+    }
+
+    const response = await axios.get("http://localhost:8080/Remind/Trash/Remindlist", {
+      params: { userid: userId }, // 携带用户ID
+      headers: { Authorization: `Bearer ${token}` } // 携带 Authorization 头部
+    });
     if (response.data && Array.isArray(response.data.data)) {
       list.value = response.data.data.sort((a, b) => b.order - a.order);
       console.log("Reminds loaded:", list.value);

@@ -14,131 +14,128 @@
     <NotesEdit v-model:visible="dialogVisible" @close="closeEditor" @refreshNotes="refreshNotes" />
     <TaskEdit v-model:visible="taskDialogVisible" @close="closeTaskEditor" @refreshTaskgroups="refreshTaskgroups" />
     <RemindEdit v-model:visible="remindDialogVisible" @close="closeRemindEditor" @refreshRemind="refreshRemind" />
-  </template>
-  
-  <script setup lang="ts">
-  import { ref, onMounted, defineEmits } from 'vue';
-  import { Plus, Tickets, AlarmClock } from '@element-plus/icons-vue';
-  import NotesEdit from "./NotesEdit.vue";
-  import TaskEdit from "./TaskEdit.vue";
-  import RemindEdit from "./RemindEdit.vue";
-  import axios from "axios";
-  
-  const isDragging = ref(false);
-  const showSubButtons = ref(false); 
-  const dialogVisible = ref(false);
-  const taskDialogVisible = ref(false);
-  const remindDialogVisible = ref(false);
-  
-  // 定义 emit 事件
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted, defineEmits } from 'vue';
+import { Plus, Tickets, AlarmClock } from '@element-plus/icons-vue';
+import NotesEdit from "./NotesEdit.vue";
+import TaskEdit from "./TaskEdit.vue";
+import RemindEdit from "./RemindEdit.vue";
+
+const isDragging = ref(false);
+const showSubButtons = ref(false); 
+const dialogVisible = ref(false);
+const taskDialogVisible = ref(false);
+const remindDialogVisible = ref(false);
+
+// 定义 emit 事件
 const emit = defineEmits(['update:visible', 'close', 'refreshNotes', 'refreshTaskgroups', 'refreshRemind']);
-  
-  const refreshNotes = () => {
-      emit('refreshNotes');
-  };
-  
-  const refreshTaskgroups = () => {
-      emit('refreshTaskgroups');
-  };
-  
-  const refreshRemind = () => {
-      emit('refreshRemind');
-  };
-  
-  // 添加便签按钮
-  const handleNotes = () => {
-      resetNoteData(); // 重置便签数据
-      dialogVisible.value = true;
-  };
-  
-  // 添加清单按钮
-  const handleTask = () => {
-      resetTaskData(); // 重置清单数据
-      taskDialogVisible.value = true;
-  };
-  // 添加提醒按钮
-  const handleRemind = () => {
-      resetRemindData(); // 重置提醒数据
-      remindDialogVisible.value = true;
-  };
-  const closeEditor = () => {
-      dialogVisible.value = false;
-  };
 
-  const closeTaskEditor = () => {
-      taskDialogVisible.value = false;
-      refreshTaskgroups(); // 关闭编辑页后刷新任务组列表
-  };
-  
-  const closeRemindEditor = () => {
-      remindDialogVisible.value = false;
-      refreshRemind(); // 关闭编辑页后刷新提醒列表
-  };
-  
-  // 侧边栏拖拽功能
-  const SideBtnDrag = () => {
-      const dragElement = document.getElementById('dragElement') as HTMLElement;
-      let startY = 0;
-      let currentY = 0;
-  
-      function handleMouseMove(event: any) {
-          isDragging.value = true;
-          currentY = event.clientY;
-          const distance = currentY - startY;
-          let currentTop = parseInt(dragElement.style.top) || dragElement.offsetTop || 0;
-          const viewportHeight = window.innerHeight;
-  
-          if (currentTop <= 0) { currentTop = 0; }
-          else if (currentTop + 40 > viewportHeight) { currentTop = viewportHeight - 40; }
-  
-          dragElement.style.top = currentTop + distance + 'px';
-          startY = currentY;
-      }
-  
-      function handleMouseUp() {
-          isDragging.value = false;
-          document.removeEventListener('mousemove', handleMouseMove);
-          document.removeEventListener('mouseup', handleMouseUp);
-      }
-  
-      dragElement.addEventListener('mousedown', (event) => {
-          startY = event.clientY;
-          document.addEventListener('mousemove', handleMouseMove);
-          document.addEventListener('mouseup', handleMouseUp);
-      });
-  };
-  
-  onMounted(() => {
-      SideBtnDrag();
-  });
+const refreshNotes = () => {
+    emit('refreshNotes');
+};
 
-  // 重置便签数据
-  const resetNoteData = () => {
-      // 触发 NotesEdit 组件中的 resetNoteData 方法
-      const notesEditComponent = document.querySelector('NotesEdit') as any;
-      if (notesEditComponent && notesEditComponent.resetNoteData) {
-          notesEditComponent.resetNoteData();
-      }
-  };
+const refreshTaskgroups = () => {
+    emit('refreshTaskgroups');
+};
 
-  // 重置清单数据
-  const resetTaskData = () => {
-      // 触发 TaskEdit 组件中的 resetTaskData 方法
-      const taskEditComponent = document.querySelector('TaskEdit') as any;
-      if (taskEditComponent && taskEditComponent.resetTaskData) {
+const refreshRemind = () => {
+    emit('refreshRemind');
+};
+
+// 添加便签按钮
+const handleNotes = () => {
+    resetNoteData(); // 重置便签数据
+    dialogVisible.value = true;
+};
+
+// 添加清单按钮
+const handleTask = () => {
+    resetTaskData(); // 重置清单数据
+    taskDialogVisible.value = true;
+};
+
+// 添加提醒按钮
+const handleRemind = () => {
+    resetRemindData(); // 重置提醒数据
+    remindDialogVisible.value = true;
+};
+
+const closeEditor = () => {
+    dialogVisible.value = false;
+};
+
+const closeTaskEditor = () => {
+    taskDialogVisible.value = false;
+    refreshTaskgroups(); // 关闭编辑页后刷新任务组列表
+};
+
+const closeRemindEditor = () => {
+    remindDialogVisible.value = false;
+    refreshRemind(); // 关闭编辑页后刷新提醒列表
+};
+
+// 侧边栏拖拽功能
+const SideBtnDrag = () => {
+    const dragElement = document.getElementById('dragElement') as HTMLElement;
+    let startY = 0;
+    let currentY = 0;
+
+    function handleMouseMove(event: any) {
+        isDragging.value = true;
+        currentY = event.clientY;
+        const distance = currentY - startY;
+        let currentTop = parseInt(dragElement.style.top) || dragElement.offsetTop || 0;
+        const viewportHeight = window.innerHeight;
+
+        if (currentTop <= 0) { currentTop = 0; }
+        else if (currentTop + 40 > viewportHeight) { currentTop = viewportHeight - 40; }
+
+        dragElement.style.top = currentTop + distance + 'px';
+        startY = currentY;
+    }
+
+    function handleMouseUp() {
+        isDragging.value = false;
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+    }
+
+    dragElement.addEventListener('mousedown', (event) => {
+        startY = event.clientY;
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+    });
+};
+
+onMounted(() => {
+    SideBtnDrag();
+});
+
+// 重置便签数据
+const resetNoteData = () => {
+    const notesEditComponent = document.querySelector('NotesEdit') as any;
+    if (notesEditComponent && notesEditComponent.resetNoteData) {
+        notesEditComponent.resetNoteData();
+    }
+};
+
+// 重置清单数据
+const resetTaskData = () => {
+    const taskEditComponent = document.querySelector('TaskEdit') as any;
+    if (taskEditComponent && taskEditComponent.resetTaskData) {
         taskEditComponent.resetTaskData();
-      }
-  };
+    }
+};
 
-  const resetRemindData = () => {
-      // 触发 RemindEdit 组件中的 resetRemindData 方法
-      const remindEditComponent = document.querySelector('RemindEdit') as any;
-      if (remindEditComponent && remindEditComponent.resetRemindData) {
-          remindEditComponent.resetRemindData();
-      }
-  }
-  </script>
-  
+const resetRemindData = () => {
+    const remindEditComponent = document.querySelector('RemindEdit') as any;
+    if (remindEditComponent && remindEditComponent.resetRemindData) {
+        remindEditComponent.resetRemindData();
+    }
+};
+</script>
 
 <style scoped lang="less">
 .el-icon {
@@ -166,13 +163,11 @@ const emit = defineEmits(['update:visible', 'close', 'refreshNotes', 'refreshTas
         gap: 8px;
         position: absolute;
         top: -150px;
-        /* 次级按钮上移 */
         right: 0;
         transition: opacity 0.3s ease-in-out;
         opacity: 0;
         visibility: hidden;
         align-items: flex-start;
-        /* 确保按钮左对齐 */
     }
 
     &:hover {
@@ -185,11 +180,8 @@ const emit = defineEmits(['update:visible', 'close', 'refreshNotes', 'refreshTas
 
 .sub-btns .sub-btn {
     margin: 0;
-    /* 清除默认的 margin */
     width: 40px;
-    /* 确保按钮大小一致 */
     height: 40px;
-    /* 确保按钮大小一致 */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -197,6 +189,5 @@ const emit = defineEmits(['update:visible', 'close', 'refreshNotes', 'refreshTas
 
 .sub-btns el-button {
     margin: 0;
-    /* 清除默认的 margin */
 }
 </style>

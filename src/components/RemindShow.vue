@@ -72,7 +72,17 @@ const selectedCard = ref<Remindcard | null>(null);
 // 获取数据
 const fetchReminds = async () => {
   try {
-    const response = await axios.get("http://localhost:8080/Remind/Remindlist");
+    const token = localStorage.getItem("jwt_token"); // 获取存储的 token
+    const userId = localStorage.getItem("userId"); // 获取存储的用户ID
+    if (!token || !userId) {
+      ElMessage.error('用户未登录或缺少必要的认证信息');
+      return;
+    }
+
+    const response = await axios.get("http://localhost:8080/Remind/Remindlist", {
+      params: { userid: userId }, // 携带用户ID
+      headers: { Authorization: `Bearer ${token}` } // 携带 Authorization 头部
+    });
     if (response.data && Array.isArray(response.data.data)) {
       list.value = response.data.data.sort((a, b) => a.order - b.order);
       console.log("Reminds loaded:", list.value);
@@ -87,11 +97,19 @@ const fetchReminds = async () => {
 // 拖拽结束事件，更新顺序
 const onEnd = async () => {
   try {
+    const token = localStorage.getItem("jwt_token"); // 获取存储的 token
+    if (!token) {
+      ElMessage.error('用户未登录或缺少必要的认证信息');
+      return;
+    }
+
     const newOrder = list.value.map((item, index) => ({
       id: item.id,
       order: index, // 设置新的顺序
     }));
-    await axios.put("http://localhost:8080/Remind/UpdateOrder", newOrder);
+    await axios.put("http://localhost:8080/Remind/UpdateOrder", newOrder, {
+      headers: { Authorization: `Bearer ${token}` } // 携带 Authorization 头部
+    });
     console.log("Order updated successfully!");
   } catch (error) {
     console.error("Failed to update order:", error);
@@ -125,8 +143,15 @@ const closeEditor = () => {
 // 归档事件
 const Archive = async (id: number) => {
   try {
+    const token = localStorage.getItem("jwt_token"); // 获取存储的 token
+    if (!token) {
+      ElMessage.error('用户未登录或缺少必要的认证信息');
+      return;
+    }
+
     const response = await axios.put("http://localhost:8080/Remind/Archive/Add", null, {
-      params: { id }
+      params: { id },
+      headers: { Authorization: `Bearer ${token}` } // 携带 Authorization 头部
     });
     if (response.data.code === "200") {
       ElMessage.success("提醒归档成功");
@@ -159,8 +184,15 @@ const confirmTrash = (id: number) => {
 // 删除提醒事件
 const Trash = async (id: number) => {
   try {
+    const token = localStorage.getItem("jwt_token"); // 获取存储的 token
+    if (!token) {
+      ElMessage.error('用户未登录或缺少必要的认证信息');
+      return;
+    }
+
     const response = await axios.put("http://localhost:8080/Remind/Trash/Add", null, {
-      params: { id }
+      params: { id },
+      headers: { Authorization: `Bearer ${token}` } // 携带 Authorization 头部
     });
     if (response.data.code === "200") {
       ElMessage.success("提醒已移到回收站");
@@ -193,8 +225,16 @@ const checkReminders = () => {
             body: item.text,
           });
           // 更新提醒状态为已提醒
+          const token = localStorage.getItem("jwt_token"); // 获取存储的 token
+          if (!token) {
+            ElMessage.error('用户未登录或缺少必要的认证信息');
+            return;
+          }
+
           item.status = '已提醒';
-          await axios.put('http://localhost:8080/Remind/RemindUpdate', item);
+          await axios.put('http://localhost:8080/Remind/RemindUpdate', item, {
+            headers: { Authorization: `Bearer ${token}` } // 携带 Authorization 头部
+          });
         }
       });
     }, 60000); // 每分钟检查一次

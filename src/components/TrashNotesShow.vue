@@ -1,5 +1,5 @@
 <template>
-    <div class="flex card-container">
+    <div class="flex card-container" v-if="list.length > 0"> <!-- 确保 list 有数据时才渲染 -->
         <div v-for="item in list" :key="item.id" class="card-item">
             <el-card shadow="always" :style="{ backgroundColor: item.color }" class="fixed-card">
                 <template #header>
@@ -25,10 +25,8 @@
                 </template>
             </el-card>
         </div>
-        <div class="flex justify-between">
-            <preview-list :list="list" />
-        </div>
     </div>
+    <div v-else class="empty-state">暂无回收站便签</div> <!-- 添加空状态提示 -->
 </template>
 
 <script setup lang="ts">
@@ -49,6 +47,17 @@ interface Notecard {
     imgList: string[];
     tagList: string[];
 }
+interface LoginResponse {
+  code: string;
+  message: string;
+  user: {
+    userid: number;
+    username: string;
+    password: string;
+  };
+  token: string;
+  data: Notecard[];
+}
 
 // 接收父组件传递的 notes 属性
 const props = defineProps<{ notes: Notecard[] }>();
@@ -56,13 +65,21 @@ const props = defineProps<{ notes: Notecard[] }>();
 // 定义事件
 const emit = defineEmits(['noteRestored']);
 
-// 初始化 list
-const list = ref<Notecard[]>(props.notes);
+// 初始化 list，确保非空
+const list = ref<Notecard[]>([]);
 
 // 还原便签事件
 const restore = async (id: number) => {
     try {
+        const token = localStorage.getItem('jwt_token'); // 获取存储的 token
+        if (!token) {
+            ElMessage.error('缺少必要的认证信息');
+            return;
+        }
         const response = await axios.put(`http://localhost:8080/Notes/Trash/Restore`, null, {
+            headers: {
+                Authorization: `Bearer ${token}` // 传递 Authorization 头部
+            },
             params: { id }
         });
         if (response.data && response.data.code === '200') {
@@ -92,7 +109,11 @@ const deleteNote = async (id: number) => {
         }
     ).then(async () => {
         try {
+            const token = localStorage.getItem('jwt_token'); // 获取存储的 token
             const response = await axios.delete(`http://localhost:8080/Notes/Trash/Delete`, {
+                headers: {
+                Authorization: `Bearer ${token}` // 传递 Authorization 头部
+                },
                 params: { id }
             });
             if (response.data && response.data.code === '200') {
@@ -114,18 +135,18 @@ const deleteNote = async (id: number) => {
 // 获取数据
 const fetchNotes = async () => {
     try {
-        const userId = localStorage.getItem('userId'); // 获取当前用户的userid
-        const token = localStorage.getItem('jwt_token'); // 获取存储的token
+        const userId = localStorage.getItem('userId'); // 获取当前用户的 userid
+        const token = localStorage.getItem('jwt_token'); // 获取存储的 token
         if (!userId || !token) {
             ElMessage.error('用户未登录或缺少必要的认证信息');
             return;
         }
         const response = await axios.get("http://localhost:8080/Notes/Trash/Noteslist", {
             headers: {
-                Authorization: `Bearer ${token}` // 传递Authorization头部
+                Authorization: `Bearer ${token}` // 传递 Authorization 头部
             },
             params: {
-                userid: userId // 传递userid参数
+                userid: userId // 传递 userid 参数
             }
         });
         if (response.data && Array.isArray(response.data.data)) {
@@ -134,18 +155,19 @@ const fetchNotes = async () => {
                 imgList: item.img ? item.img.split(",") : [],
                 tagList: item.tag ? item.tag.split(",") : [],
             })).sort((a, b) => b.order - a.order);
-            console.log("list updated:", list.value); 
         } else {
             console.error("Unexpected response format:", response.data);
+            ElMessage.error('获取回收站便签数据失败');
         }
     } catch (error) {
         console.error("Failed to fetch notes:", error);
+        ElMessage.error('获取回收站便签数据失败，请检查网络连接');
     }
 };
 
 // 格式化文本，将换行符替换为 <br> 标签
-const formatText = (text: string) => {
-    return text.replace(/\n/g, '<br>');
+const formatText = (text: string | null | undefined) => {
+    return text ? text.replace(/\n/g, '<br>') : ""; 
 };
 
 // 初始化时加载数据

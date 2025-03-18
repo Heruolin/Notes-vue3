@@ -29,11 +29,11 @@
     <template #footer>
       <!-- 底部按钮 -->
       <div class="footer-buttons">
-        <div>
-          <el-button circle title="添加图片" icon="Picture" @click="AddImg" />
-          <el-button circle title="添加标签" icon="CollectionTag" @click="AddTag" />
+        <div class="left-buttons">
+          <el-button v-if="localData.id" circle title="添加图片" icon="Picture" @click="AddImg" />
+          <el-button v-if="localData.id" circle title="添加标签" icon="CollectionTag" @click="AddTag" />
         </div>
-        <el-color-picker v-model="localData.color" title="修改背景色" show-alpha @change="handleColorChange" />
+        <el-color-picker v-model="localData.color" title="修改背景色" show-alpha @change="handleColorChange" class="right-button" />
       </div>
       <div>
         <el-button @click="close">保存</el-button>
@@ -395,5 +395,14 @@ const addSelectedTags = () => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 10px; 
+}
+
+.left-buttons {
+  display: flex;
+  gap: 0px;
+}
+
+.right-button {
+  margin-left: auto;
 }
 </style>

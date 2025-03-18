@@ -103,6 +103,7 @@ watch(
 
 const dialogVisible = ref(false);
 
+const token = localStorage.getItem('token');
 // 监听 props.visible 的变化
 watch(
   () => props.visible,
@@ -165,6 +166,7 @@ async function removeIncomplete(index: number) {
   if (task.id) {
     try {
       await axios.delete("http://localhost:8080/Task/TaskDelete", {
+        headers: { Authorization: `Bearer ${token}` },
         params: { id: task.id }
       });
     } catch (error) {
@@ -179,6 +181,7 @@ async function removeComplete(index: number) {
   if (task.id) {
     try {
       await axios.delete("http://localhost:8080/Task/TaskDelete", {
+        headers: { Authorization: `Bearer ${token}` },
         params: { id: task.id }
       });
     } catch (error) {
@@ -214,13 +217,33 @@ function updateOrder(listType: 'incomplete' | 'complete') {
 // 保存数据
 async function save() {
   try {
-    const updatedTasks = [...incompleteList.value, ...completeList.value];
-    const updatedTaskgroup = { ...localData.value, tasks: updatedTasks };
+    const token = localStorage.getItem('jwt_token'); // 获取存储的 token
+    if (!token) {
+      console.error("用户未登录或缺少必要的认证信息");
+      return;
+    }
+    
+    const userId = localStorage.getItem('userId'); // 获取存储的用户ID
+    
+    if (!userId) {
+      console.error("用户ID缺失");
+      return;
+    }
 
+    const updatedTasks = [...incompleteList.value, ...completeList.value];
+    const updatedTaskgroup = { 
+      ...localData.value, 
+      tasks: updatedTasks,
+      userid:userId // 注入用户ID到任务组
+    };
+    console.log("Updated Taskgroup:", updatedTaskgroup);
     if (localData.value.id) {
       // 如果任务组存在 id，说明是更新任务组
       await axios.put("http://localhost:8080/Taskgroup/TaskgroupUpdate", updatedTaskgroup, {
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}` // 携带 Authorization 头部
+        }
       });
 
       // 更新每个任务
@@ -231,19 +254,33 @@ async function save() {
             name: task.name,
             taskgroupId: task.taskgroupId,
             completed: task.completed,
-            order: task.order
-          }, { headers: { 'Content-Type': 'application/json' } });
+            order: task.order,
+            userId:userId // 注入用户ID到任务组
+          }, {
+            headers: { 
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}` // 携带 Authorization 头部
+            }
+          });
         } else {
           // 如果任务存在 id，说明是更新任务
           await axios.put("http://localhost:8080/Task/TaskUpdate", task, {
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}` // 携带 Authorization 头部
+            }
           });
         }
       }
     } else {
       // 如果任务组没有 id，说明是添加新任务组
-      const response = await axios.post("http://localhost:8080/Taskgroup/TaskgroupAdd", updatedTaskgroup, {
-        headers: { 'Content-Type': 'application/json' }
+      const response = await axios.post("http://localhost:8080/Taskgroup/TaskgroupAdd", {
+        ...updatedTaskgroup
+      }, {
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}` // 携带 Authorization 头部
+        }
       });
 
       // 获取新添加的任务组的 id
@@ -256,8 +293,14 @@ async function save() {
           name: task.name,
           taskgroupId: task.taskgroupId,
           completed: task.completed,
-          order: task.order
-        }, { headers: { 'Content-Type': 'application/json' } });
+          order: task.order,
+          userId // 添加 userId 字段
+        }, {
+          headers: { 
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}` // 携带 Authorization 头部
+          }
+        });
       }
     }
 
