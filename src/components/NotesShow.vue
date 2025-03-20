@@ -1,44 +1,52 @@
 <template>
-    <div class="flex">
-        <VueDraggable ref="el" v-model="list" :animation="150" ghost-class="ghost" class="card-container"
-            @start="onStart" @update="onUpdate" @end="onEnd">
-            <div v-if="list.length > 0" v-for="item in list" :key="item.id" class="card-item" @click="openEditor(item)">
-                <el-card shadow="always" :style="{ backgroundColor: item.color }" class="fixed-card">
-                    <template #header>
-                        <div v-for="(img, index) in item.imgList" :key="index" class="card-header">
-                            <el-image :src="`/assets/Notesimages/${img}`" alt="Card image" class="image" />
-                        </div>
-                    </template>
-                    <div>
-                        <h1 class="centered-title">{{ item.title }}</h1>
-                    </div>
-                    <div v-html="formatText(item.text)">
-                    </div>
-                    <template #footer>
-                        <div class="flex gap-2 mb-2">
-                            <el-tag v-for="(tag, index) in item.tagList" :key="index" type="info" :class="getTagClass(item.color)">
-                                {{ tag }}
-                            </el-tag>
-                        </div>
-                        <div class="flex justify-start gap-2" style="margin-top: 10px;">
-                            <el-button circle title="归档" icon="FolderAdd" @click.stop="Archive(item.id)" :class="getButtonClass(item.color)" />
-                            <el-button circle title="删除便签" icon="Failed" @click.stop="confirmTrash(item.id)" :class="getButtonClass(item.color)" />
-                        </div>
-                    </template>
-                </el-card>
+  <div class="flex">
+    <VueDraggable ref="el" v-model="list" :animation="150" ghost-class="ghost" class="card-container" @start="onStart"
+      @update="onUpdate" @end="onEnd" :filter="'.locked-card'">
+      <div v-if="list.length > 0" v-for="item in list" :key="item.id" class="card-item" @click="openEditor(item)"  :class="{ 'locked-card': item.lock === 'on' }">
+        <el-card shadow="always" :style="{ backgroundColor: item.color }" class="fixed-card">
+          <template #header>
+             <!-- 添加图钉 -->
+            <div class="pin-container" @click.stop="toggleLock(item)" :class="{ 'hover-visible': item.lock == 'on' }">
+              <svg>
+                <use :xlink:href="item.lock === 'on' ? '#icon-pushpin-2-line' : '#icon-pushpin-line'"></use>
+              </svg>
             </div>
-        </VueDraggable>
-        <NotesEdit v-model:visible="dialogVisible" :data="selectedCard" @refreshNotes="fetchNotes" @@close="closeEditor" />
-        <FloatingButton @refreshNotes="fetchNotes"/>
-        <div class="flex justify-between">
-            <preview-list :list="list" />
-        </div>
+            <div v-for="(img, index) in item.imgList" :key="index" class="card-header">
+              <el-image :src="`/assets/Notesimages/${img}`" alt="Card image" class="image" />
+            </div>
+          </template>
+          <div>
+            <h1 class="centered-title">{{ item.title }}</h1>
+          </div>
+          <div v-html="formatText(item.text)">
+          </div>
+          <template #footer>
+            <div class="flex gap-2 mb-2">
+              <el-tag v-for="(tag, index) in item.tagList" :key="index" type="info" :class="getTagClass(item.color)">
+                {{ tag }}
+              </el-tag>
+            </div>
+            <div class="flex justify-start gap-2" style="margin-top: 10px;">
+              <el-button circle title="归档" icon="FolderAdd" @click.stop="Archive(item.id)"
+                :class="getButtonClass(item.color)" />
+              <el-button circle title="删除便签" icon="Failed" @click.stop="confirmTrash(item.id)"
+                :class="getButtonClass(item.color)" />
+            </div>
+          </template>
+        </el-card>
+      </div>
+    </VueDraggable>
+    <NotesEdit v-model:visible="dialogVisible" :data="selectedCard" @refreshNotes="fetchNotes" @@close="closeEditor" />
+    <FloatingButton @refreshNotes="fetchNotes" />
+    <div class="flex justify-between">
+      <preview-list :list="list" />
     </div>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { ref, watch, onMounted } from "vue";
-import { type DraggableEvent, VueDraggable  } from "vue-draggable-plus";
+import { type DraggableEvent, VueDraggable } from "vue-draggable-plus";
 import request from '@/utils/request';
 import NotesEdit from "./NotesEdit.vue";
 import FloatingButton from "./FloatingButton.vue";
@@ -46,16 +54,18 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 
 // 定义接口
 interface Notecard {
-    id: number;
-    userid: number;
-    title: string;
-    text: string;
-    tag: string;
-    img: string | null;
-    color: string;
-    order: number;
-    imgList: string[];
-    tagList: string[];
+  id: number;
+  userid: number;
+  title: string;
+  text: string;
+  tag: string;
+  img: string | null;
+  color: string;
+  order: number;
+  imgList: string[];
+  tagList: string[];
+  pinned?: boolean; // 添加 pinned 属性
+  lock?: string; // 添加 lock 属性
 }
 
 interface LoginResponse {
@@ -93,6 +103,8 @@ const dialogVisible = ref(false);
 // 用于存储当前选中的便签
 const selectedCard = ref<Notecard | null>(null);
 
+
+
 // 获取数据
 const fetchNotes = async () => {
   try {
@@ -111,7 +123,7 @@ const fetchNotes = async () => {
         imgList: item.img ? item.img.split(",").filter((img) => img.trim() !== "") : [],
         tagList: item.tag ? item.tag.split(",").filter((tag) => tag.trim() !== "") : [],
       })).sort((a, b) => a.order - b.order); // 按 order 排序
-      console.log("list updated:", list.value); 
+      console.log("list updated:", list.value);
     } else {
       console.error("Unexpected response format:", data);
     }
@@ -243,6 +255,10 @@ const getButtonClass = (color: string) => {
 // 初始化时加载数据
 onMounted(() => {
   fetchNotes();
+  list.value.forEach(item => {
+    item.pinned = false; // 初始化 pinned 状态为 false
+    item.lock = item.lock || "off"; // 初始化 lock 字段为 "off"（如果为空）
+  });
 });
 
 // 格式化文本，将换行符替换为 <br> 标签
@@ -250,52 +266,117 @@ const formatText = (text: string | null | undefined) => {
   return (text || '').replace(/\n/g, '<br>'); // 确保 text 为字符串
 };
 
+// 切换图钉状态
+const togglePin = (item: Notecard) => {
+  item.pinned = !item.pinned; // 切换 pinned 状态
+  console.log(`Note ${item.id} pinned status:`, item.pinned);
+};
+
+// 切换锁定状态并更新数据库
+const toggleLock = async (item: Notecard) => {
+  try {
+    const token = localStorage.getItem("jwt_token"); // 获取存储的 token
+    if (!token) {
+      ElMessage.error("用户未登录或缺少必要的认证信息");
+      return;
+    }
+
+    // 切换锁定状态
+    item.lock = item.lock === "on" ? "off" : "on";
+
+    // 更新数据库中的 lock 字段
+    await request.put(`/Notes/UpdateLock`, { id: item.id, lock: item.lock }, {
+      headers: { Authorization: `Bearer ${token}` } // 携带 Authorization 头部
+    });
+  } catch (error) {
+    console.error("Failed to update lock status:", error);
+    ElMessage.error("更新锁定状态失败，请检查网络连接");
+  }
+};
+
 </script>
 
 <style scoped>
 .card-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-    justify-content: center;
-    padding: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: center;
+  padding: 16px;
 }
 
 .card-item {
-    flex: 1 1 300px; /* 略微加大宽度 */
-    max-width: 300px; /* 略微加大宽度 */
-    box-sizing: border-box;
+  flex: 1 1 300px;
+  max-width: 300px;
+  box-sizing: border-box;
+  position: relative; /* 设置父容器为相对定位 */
+}
+
+.pin-container {
+  position: absolute;  /* 绝对定位 */
+  top: 6px;  /* 调整与顶部的距离 */
+  right: 6px;  /* 调整与右侧的距离 */
+  z-index: 10;  /* 确保图钉在最上层 */
+  cursor: pointer;  /* 鼠标变成手型 */
+  width: 20px; /* 调整容器大小 */
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0; /* 默认隐藏 */
+  transition: opacity 0.2s ease-in-out;
+}
+
+.pin-container.hover-visible {
+  opacity: 1; /* 鼠标悬浮时显示 */
+}
+
+.card-item:hover .pin-container {
+  opacity: 1; /* 鼠标悬浮时显示 */
+}
+
+.pin-container svg {
+  width: 20px;  /* 缩小图标 */
+  height: 20px;
+  fill: rgba(0, 0, 0, 0.5);  /* 让图标颜色稍暗，增强对比度 */
+  transition: transform 0.2s ease-in-out;
+}
+
+.pin-container svg:hover {
+  transform: scale(1.2); /* 鼠标悬停时放大 */
 }
 
 .ghost {
-    opacity: 0.5;
-    background: #c8ebfb;
+  opacity: 0.5;
+  background: #c8ebfb;
 }
 
 .card-header {
-    text-align: center;
+  text-align: center;
 }
 
 /* 透明背景色样式 */
 .transparent-tag {
-    background-color: rgba(255, 255, 255, 0.5) !important;
-    border: 1px solid rgba(0, 0, 0, 0.1);
+  background-color: rgba(255, 255, 255, 0.5) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .transparent-button {
-    background-color: rgba(255, 255, 255, 0.5) !important;
-    border: none !important;
+  background-color: rgba(255, 255, 255, 0.5) !important;
+  border: none !important;
 }
 
 /* 标题居中样式 */
 .centered-title {
-    text-align: center;
+  text-align: center;
 }
 
 .empty-state {
-    text-align: center;
-    font-size: 18px;
-    color: #999;
-    margin-top: 20px;
+  text-align: center;
+  font-size: 18px;
+  color: #999;
+  margin-top: 20px;
 }
+
+
 </style>

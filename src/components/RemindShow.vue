@@ -1,10 +1,37 @@
 <template>
   <div class="flex">
-    <VueDraggable ref="el" v-model="list" :animation="150" ghost-class="ghost" class="card-container" @start="onStart"
-      @update="onUpdate" @end="onEnd">
-      <div v-for="item in list" :key="item.id" class="card-item" @click="openEditor(item)">
+    <VueDraggable
+      ref="el"
+      v-model="list"
+      :animation="150"
+      ghost-class="ghost"
+      class="card-container"
+      @start="onStart"
+      @update="onUpdate"
+      @end="onEnd"
+      :filter="'.locked-card'"
+    >
+      <div
+        v-for="item in list"
+        :key="item.id"
+        class="card-item"
+        :class="{ 'locked-card': item.lock === 'on' }"
+        @click="openEditor(item)"
+      >
         <el-card shadow="always" class="fixed-card">
           <template #header>
+            <!-- 添加图钉 -->
+            <div
+              class="pin-container"
+              @click.stop="toggleLock(item)"
+              :class="{ 'hover-visible': item.lock === 'on' }"
+            >
+              <svg>
+                <use
+                  :xlink:href="item.lock === 'on' ? '#icon-pushpin-2-line' : '#icon-pushpin-line'"
+                ></use>
+              </svg>
+            </div>
             <div class="centered-header">
               <h1>{{ item.remindTime }}</h1>
             </div>
@@ -12,7 +39,6 @@
           <div>
             {{ item.text }}
           </div>
-
           <template #footer>
             <div class="flex justify-between items-center w-full" style="margin-top: 10px;">
               <div class="flex gap-2">
@@ -29,8 +55,7 @@
         </el-card>
       </div>
     </VueDraggable>
-    <RemindEdit v-model:visible="dialogVisible" :data="selectedCard" @refreshRemind="fetchReminds"
-      @close="closeEditor" />
+    <RemindEdit v-model:visible="dialogVisible" :data="selectedCard" @refreshRemind="fetchReminds" @close="closeEditor" />
     <FloatingButton @refreshRemind="fetchReminds" />
     <div class="flex justify-between">
       <preview-list :list="list" />
@@ -39,7 +64,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { type DraggableEvent, VueDraggable } from "vue-draggable-plus";
 import axios from "axios";
 import { ElMessage, ElMessageBox } from 'element-plus';
@@ -55,6 +80,7 @@ interface Remindcard {
   remindTime: string;
   order: number;
   status: string;
+  lock?: string; // 添加 lock 属性
 }
 
 // 初始化 list
@@ -209,6 +235,9 @@ const Trash = async (id: number) => {
 onMounted(() => {
   fetchReminds();
   checkReminders();
+  list.value.forEach(item => {
+    item.lock = item.lock || "off"; // 初始化 lock 字段为 "off"（如果为空）
+  });
 });
 
 // 检查提醒时间并弹出通知
@@ -246,6 +275,33 @@ const checkReminders = () => {
     });
   }
 };
+
+// 过滤出未锁定的提醒用于拖拽
+const draggableReminds = computed(() => {
+  return list.value.filter(item => item.lock !== "on");
+});
+
+// 切换锁定状态并更新数据库
+const toggleLock = async (item: Remindcard) => {
+  try {
+    const token = localStorage.getItem("jwt_token"); // 获取存储的 token
+    if (!token) {
+      ElMessage.error("用户未登录或缺少必要的认证信息");
+      return;
+    }
+
+    // 切换锁定状态
+    item.lock = item.lock === "on" ? "off" : "on";
+
+    // 更新数据库中的 lock 字段
+    await axios.put("http://localhost:8080/Remind/UpdateLock", { id: item.id, lock: item.lock }, {
+      headers: { Authorization: `Bearer ${token}` } // 携带 Authorization 头部
+    });
+  } catch (error) {
+    console.error("Failed to update lock status:", error);
+    ElMessage.error("更新锁定状态失败，请检查网络连接");
+  }
+};
 </script>
 
 <style scoped>
@@ -263,6 +319,8 @@ const checkReminders = () => {
   max-width: 300px;
   /* 卡片宽度 */
   box-sizing: border-box;
+  position: relative;
+  /* 设置父容器为相对定位 */
 }
 
 .ghost {
@@ -288,26 +346,35 @@ const checkReminders = () => {
 
 .status-text-container {
   display: flex;
-  justify-content: flex-end; /* 右对齐 */
+  justify-content: flex-end;
+  /* 右对齐 */
   width: 100%;
 }
 
 .status-text {
   text-align: right;
-  display: inline-block; /* 使边框贴合文字 */
-  border: 1px solid #ccc; /* 添加边框 */
-  padding: 2px 8px; /* 添加内边距 */
-  border-radius: 4px; /* 添加圆角 */
+  display: inline-block;
+  /* 使边框贴合文字 */
+  border: 1px solid #ccc;
+  /* 添加边框 */
+  padding: 2px 8px;
+  /* 添加内边距 */
+  border-radius: 4px;
+  /* 添加圆角 */
 }
 
 .reminded {
-  background-color: #67C23A; /* 已提醒背景色 */
-  color: white; /* 已提醒文字颜色 */
+  background-color: #67C23A;
+  /* 已提醒背景色 */
+  color: white;
+  /* 已提醒文字颜色 */
 }
 
 .not-reminded {
-  background-color: #F0F2F5; /* 未提醒背景色 */
-  color: black; /* 未提醒文字颜色 */
+  background-color: #F0F2F5;
+  /* 未提醒背景色 */
+  color: black;
+  /* 未提醒文字颜色 */
 }
 
 .demo-radius .radius {
@@ -316,5 +383,43 @@ const checkReminders = () => {
   border: 1px solid var(--el-border-color);
   border-radius: 0;
   margin-top: 20px;
+}
+
+.pin-container {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 10;
+  cursor: pointer;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0; /* 默认隐藏 */
+  transition: opacity 0.2s ease-in-out;
+}
+
+.pin-container.hover-visible {
+  opacity: 1; /* 鼠标悬浮时显示 */
+}
+
+.card-item:hover .pin-container {
+  opacity: 1; /* 鼠标悬浮时显示 */
+}
+
+.pin-container svg {
+  width: 20px;
+  height: 20px;
+  fill: rgba(0, 0, 0, 0.5); /* 图标颜色稍暗，增强对比度 */
+  transition: transform 0.2s ease-in-out;
+}
+
+.pin-container svg:hover {
+  transform: scale(1.2); /* 鼠标悬停时放大 */
+}
+
+.locked-card {
+  pointer-events: none; /* 禁止拖拽 */
 }
 </style>

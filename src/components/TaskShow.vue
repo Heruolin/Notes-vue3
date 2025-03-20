@@ -1,10 +1,15 @@
 <template>
   <div class="flex">
     <VueDraggable ref="el" v-model="taskgroups" :animation="150" ghost-class="ghost" class="card-container"
-      @start="onStart" @update="onUpdate" @end="onEnd">
-      <div v-for="taskgroup in activeTaskgroups" :key="taskgroup.id" class="card-item">
+      @start="onStart" @update="onUpdate" @end="onEnd" :filter="'.locked-card'">
+      <div v-for="taskgroup in taskgroups" :key="taskgroup.id" class="card-item" :class="{ 'locked-card': taskgroup.lock === 'on' }">
         <el-card shadow="always" class="fixed-card" @click="openEditor(taskgroup)">
           <template #header>
+            <div class="pin-container" @click.stop="toggleLock(taskgroup)" :class="{ 'hover-visible': taskgroup.lock === 'on' }">
+              <svg>
+                <use :xlink:href="taskgroup.lock === 'on' ? '#icon-pushpin-2-line' : '#icon-pushpin-line'"></use>
+              </svg>
+            </div>
             <div>
               <h1>{{ taskgroup.title }}</h1>
             </div>
@@ -75,6 +80,7 @@ interface Taskgroup {
   tasks: Task[];
   order: number;
   status: string; // 添加 status 字段
+  lock?: string; // 添加 lock 属性
 }
 
 // 初始化 taskgroups
@@ -138,6 +144,9 @@ const refreshTaskgroups = () => {
 // 初始化时加载数据
 onMounted(() => {
   fetchTaskgroups();
+  taskgroups.value.forEach(taskgroup => {
+    taskgroup.lock = taskgroup.lock || "off"; // 初始化 lock 字段为 "off"（如果为空）
+  });
 });
 
 // 监听 refreshTaskgroups 事件
@@ -309,6 +318,28 @@ const activeTaskgroups = computed(() => {
   return taskgroups.value.filter(taskgroup => taskgroup.status !== 'archived' && taskgroup.status !== 'trashed');
 });
 
+// 切换锁定状态并更新数据库
+const toggleLock = async (taskgroup: Taskgroup) => {
+  try {
+    const token = localStorage.getItem("jwt_token"); // 获取存储的 token
+    if (!token) {
+      ElMessage.error("用户未登录或缺少必要的认证信息");
+      return;
+    }
+
+    // 切换锁定状态
+    taskgroup.lock = taskgroup.lock === "on" ? "off" : "on";
+
+    // 更新数据库中的 lock 字段
+    await axios.put("http://localhost:8080/Taskgroup/UpdateLock", { id: taskgroup.id, lock: taskgroup.lock }, {
+      headers: { Authorization: `Bearer ${token}` } // 携带 Authorization 头部
+    });
+  } catch (error) {
+    console.error("Failed to update lock status:", error);
+    ElMessage.error("更新锁定状态失败，请检查网络连接");
+  }
+};
+
 // 初始化时加载数据
 onMounted(() => {
   fetchTaskgroups();
@@ -328,6 +359,7 @@ onMounted(() => {
   flex: 1 1 300px; /* 固定宽度 */
   max-width: 300px; /* 固定宽度 */
   box-sizing: border-box;
+  position: relative; /* 设置父容器为相对定位 */
 }
 
 .ghost {
@@ -353,5 +385,54 @@ onMounted(() => {
 .button-group {
   display: flex;
   gap: 27px; /* 增加按钮之间的间距 */
+}
+
+.pin-container {
+  position: absolute;  /* 绝对定位 */
+  top: 6px;  /* 调整与顶部的距离 */
+  right: 6px;  /* 调整与右侧的距离 */
+  z-index: 10;  /* 确保图钉在最上层 */
+  cursor: pointer;  /* 鼠标变成手型 */
+  width: 20px; /* 调整容器大小 */
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0; /* 默认隐藏 */
+  transition: opacity 0.2s ease-in-out;
+}
+
+.pin-container svg {
+  width: 20px;  /* 缩小图标 */
+  height: 20px;
+  fill: rgba(0, 0, 0, 0.5);  /* 让图标颜色稍暗，增强对比度 */
+  transition: transform 0.2s ease-in-out;
+}
+
+.pin-container svg:hover {
+  transform: scale(1.2); /* 鼠标悬停时放大 */
+}
+
+.pin-container.hover-visible {
+  opacity: 1; /* 鼠标悬浮时显示 */
+}
+
+.card-item:hover .pin-container {
+  opacity: 1; /* 鼠标悬浮时显示 */
+}
+
+.pin-container svg {
+  width: 20px;  /* 缩小图标 */
+  height: 20px;
+  fill: rgba(0, 0, 0, 0.5);  /* 让图标颜色稍暗，增强对比度 */
+  transition: transform 0.2s ease-in-out;
+}
+
+.pin-container svg:hover {
+  transform: scale(1.2); /* 鼠标悬停时放大 */
+}
+
+.locked-card {
+  pointer-events: auto; /* 允许点击事件 */
 }
 </style>

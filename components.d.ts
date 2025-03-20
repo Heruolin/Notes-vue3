@@ -10,6 +10,8 @@ declare module 'vue' {
     ArchiveNotesShow: typeof import('./src/components/ArchiveNotesShow.vue')['default']
     ArchiveRemindShow: typeof import('./src/components/ArchiveRemindShow.vue')['default']
     ArchiveTaskShow: typeof import('./src/components/ArchiveTaskShow.vue')['default']
+    CardComponent: typeof import('./src/components/CardComponent.vue')['default']
+    ChangePassword: typeof import('./src/components/ChangePassword.vue')['default']
     ElAside: typeof import('element-plus/es')['ElAside']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElCard: typeof import('element-plus/es')['ElCard']
@@ -17,6 +19,7 @@ declare module 'vue' {
     ElContainer: typeof import('element-plus/es')['ElContainer']
     ElDatePicker: typeof import('element-plus/es')['ElDatePicker']
     ElDialog: typeof import('element-plus/es')['ElDialog']
+    ElDrawer: typeof import('element-plus/es')['ElDrawer']
     ElForm: typeof import('element-plus/es')['ElForm']
     ElFormItem: typeof import('element-plus/es')['ElFormItem']
     ElHeader: typeof import('element-plus/es')['ElHeader']
@@ -52,5 +55,6 @@ declare module 'vue' {
     TrashRemindShow: typeof import('./src/components/TrashRemindShow.vue')['default']
     TrashTaskShow: typeof import('./src/components/TrashTaskShow.vue')['default']
     ValidCode: typeof import('./src/components/ValidCode.vue')['default']
+    YourComponent: typeof import('./src/components/YourComponent.vue')['default']
   }
 }

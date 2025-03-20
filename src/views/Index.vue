@@ -108,6 +108,13 @@
               <span>设置</span>
             </template>
             <el-menu-item-group>
+              <el-sub-menu index="profile">
+                <template #title>
+                  <span>个人中心</span>
+                </template>
+                <el-menu-item index="profile-ChangePassword" @click="openChangePassword">修改密码</el-menu-item>
+                <el-menu-item index="profile-Deregister" @click="confirmDeregister">注销账户</el-menu-item>
+              </el-sub-menu>
               <el-menu-item index="logout" @click="logout">
                 退出登录
               </el-menu-item>
@@ -133,6 +140,7 @@
     </el-container>
     <TagEdit v-model:visible="tagEditVisible" @refreshTags="fetchTags" />
     <NotesEdit v-model:visible="dialogVisible" :data="selectedCard" @refreshNotes="fetchNotes" @refreshTags="fetchTags" @close="closeEditor" />
+    <ChangePassword v-model:dialogVisible="changePasswordVisible" />
   </div>
 </template>
 
@@ -151,7 +159,7 @@ import {
   AlarmClock,
   Setting
 } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request'
 import NotesShow from '@/components/NotesShow.vue';
 import TagEdit from '@/components/TagEdit.vue';
@@ -164,6 +172,8 @@ import TrashNotesShow from '@/components/TrashNotesShow.vue';
 import TrashTaskShow from '@/components/TrashTaskShow.vue';
 import TrashRemindShow from '@/components/TrashRemindShow.vue';
 import NotesEdit from '@/components/NotesEdit.vue';
+import ChangePassword from '@/components/ChangePassword.vue';
+import axios from 'axios';
 
 interface LoginResponse {
   code: string;
@@ -456,5 +466,54 @@ const logout = () => {
   router.push('/login'); // 跳转到登录页面
 };
 
+const changePasswordVisible = ref(false);
+
+const openChangePassword = () => {
+  changePasswordVisible.value = true;
+};
+
+const confirmDeregister = () => {
+  ElMessageBox.confirm(
+    '确定要注销账户吗？此操作不可恢复！',
+    '警告',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    }
+  ).then(async () => {
+    try {
+      const token = localStorage.getItem('jwt_token');
+      const userId = localStorage.getItem('userId'); // 获取存储的 userid
+      if (!token || !userId) {
+        ElMessage.error('用户未登录或缺少必要的认证信息');
+        return;
+      }
+
+      const response = await axios.post(
+        'http://localhost:8080/user/deregister',
+        { userid: userId }, // 携带 userid 参数
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (response.data.code === '200') {
+        ElMessage.success('账户已成功注销');
+        localStorage.removeItem('jwt_token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('userId');
+        router.push('/login');
+      } else {
+        ElMessage.error(response.data.message || '注销失败');
+      }
+    } catch (error) {
+      console.error('注销失败:', error);
+      ElMessage.error('注销失败，请检查网络连接');
+    }
+  }).catch(() => {
+    ElMessage.info('已取消注销');
+  });
+};
 </script>
 

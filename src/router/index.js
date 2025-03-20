@@ -55,6 +55,11 @@ const routes = [
     path:'/RemindEdit',
     name:'RemindEdit',
     component:()=>import('../components/RemindEdit.vue')
+  },
+  {
+    path:'/ChangePassword',
+    name:'ChangePassword',
+    component:()=>import('../components/ChangePassword.vue')
   }
 ]
 
@@ -63,4 +68,14 @@ const router = createRouter({
   routes,
 })
 
-export default router
+router.beforeEach((to, from, next) => {
+  const token = localStorage.getItem('jwt_token'); // 检查是否有 token
+  if (!token && to.name === 'index') {
+    // 如果未登录且访问的是 Index 页面，跳转到 Login 页面
+    next({ name: 'Login' });
+  } else {
+    next(); // 继续导航
+  }
+});
+
+export default router;

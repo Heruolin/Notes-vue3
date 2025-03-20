@@ -10,12 +10,10 @@
           class="demo-user">
           <div style="font-size: 20px; font-weight: bold; text-align: center; margin-bottom: 20px;">便签系统</div>
           <el-form-item label="帐号" prop="username">
-            <el-input prefix-icon="User" size="default" placeholder="请输入帐号" v-model="user.username"
-              autocomplete="off" />
+            <el-input prefix-icon="User" size="default" placeholder="请输入帐号" v-model="user.username" autocomplete="off" />
           </el-form-item>
           <el-form-item label="密码" prop="password">
-            <el-input show-password prefix-icon="Lock" size="default" placeholder="请输入密码" v-model="user.password"
-              autocomplete="off" />
+            <el-input show-password prefix-icon="Lock" size="default" placeholder="请输入密码" v-model="user.password" autocomplete="off" />
           </el-form-item>
           <el-form-item>
             <el-button type="primary" style="width: 100%;" @click="submitForm(userRef)" :loading="isSubmitting">登录</el-button>
