@@ -1,35 +1,49 @@
 <template>
-  <div class="flex">
-    <VueDraggable
-      ref="el"
-      v-model="list"
-      :animation="150"
-      ghost-class="ghost"
-      class="card-container"
-      @start="onStart"
-      @update="onUpdate"
-      @end="onEnd"
-      :filter="'.locked-card'"
-    >
-      <div
-        v-for="item in list"
-        :key="item.id"
-        class="card-item"
-        :class="{ 'locked-card': item.lock === 'on' }"
-        @click="openEditor(item)"
-      >
+  <div class="flex flex-col">
+    <!-- 置顶提醒 -->
+    <div v-if="pinnedList.length > 0" class="card-container">
+      <div v-for="item in pinnedList" :key="item.id" class="card-item pinned-card" @click="openEditor(item)">
         <el-card shadow="always" class="fixed-card">
           <template #header>
-            <!-- 添加图钉 -->
-            <div
-              class="pin-container"
-              @click.stop="toggleLock(item)"
-              :class="{ 'hover-visible': item.lock === 'on' }"
-            >
+            <div class="pin-container" @click.stop="toggleLock(item)" :class="{ 'hover-visible': item.lock === 'on' }">
               <svg>
-                <use
-                  :xlink:href="item.lock === 'on' ? '#icon-pushpin-2-line' : '#icon-pushpin-line'"
-                ></use>
+                <use :xlink:href="item.lock === 'on' ? '#icon-pushpin-2-line' : '#icon-pushpin-line'"></use>
+              </svg>
+            </div>
+            <div class="centered-header">
+              <h1>{{ item.remindTime }}</h1>
+            </div>
+          </template>
+          <div>
+            {{ item.text }}
+          </div>
+          <template #footer>
+            <div class="flex justify-between items-center w-full" style="margin-top: 10px;">
+              <div class="flex gap-2">
+                <el-button circle title="归档" icon="FolderAdd" @click.stop="Archive(item.id)" />
+                <el-button circle title="删除提醒" icon="Failed" @click.stop="confirmTrash(item.id)" />
+              </div>
+              <div class="status-text-container">
+                <div :class="['status-text', 'bordered', item.status === '已提醒' ? 'reminded' : 'not-reminded']">
+                  {{ item.status }}
+                </div>
+              </div>
+            </div>
+          </template>
+        </el-card>
+      </div>
+      <el-divider />
+    </div>
+
+    <!-- 非置顶提醒 -->
+    <VueDraggable ref="el" v-model="nonPinnedList" :animation="150" ghost-class="ghost" class="card-container" @start="onStart"
+      @update="onUpdate" @end="onEnd" :filter="'.locked-card'">
+      <div v-for="item in nonPinnedList" :key="item.id" class="card-item" @click="openEditor(item)" :class="{ 'locked-card': item.lock === 'on' }">
+        <el-card shadow="always" class="fixed-card">
+          <template #header>
+            <div class="pin-container" @click.stop="toggleLock(item)" :class="{ 'hover-visible': item.lock === 'on' }">
+              <svg>
+                <use :xlink:href="item.lock === 'on' ? '#icon-pushpin-2-line' : '#icon-pushpin-line'"></use>
               </svg>
             </div>
             <div class="centered-header">
@@ -55,6 +69,7 @@
         </el-card>
       </div>
     </VueDraggable>
+
     <RemindEdit v-model:visible="dialogVisible" :data="selectedCard" @refreshRemind="fetchReminds" @close="closeEditor" />
     <FloatingButton @refreshRemind="fetchReminds" />
     <div class="flex justify-between">
@@ -134,7 +149,7 @@ const onEnd = async () => {
       order: index, // 设置新的顺序
     }));
     await axios.put("http://localhost:8080/Remind/UpdateOrder", newOrder, {
-      headers: { Authorization: `Bearer ${token}` } // 携带 Authorization 头部
+      headers: { Authorization: `Bearer ${token}` } 
     });
     console.log("Order updated successfully!");
   } catch (error) {
@@ -151,7 +166,7 @@ const onUpdate = (e: DraggableEvent) => {
   console.log("update", e);
   // 更新顺序
   list.value.forEach((item, index) => {
-    item.order = index; // 每个项的 order 更新为新的顺序
+    item.order = index; 
   });
 };
 
@@ -236,7 +251,7 @@ onMounted(() => {
   fetchReminds();
   checkReminders();
   list.value.forEach(item => {
-    item.lock = item.lock || "off"; // 初始化 lock 字段为 "off"（如果为空）
+    item.lock = item.lock || "off"; 
   });
 });
 
@@ -302,6 +317,12 @@ const toggleLock = async (item: Remindcard) => {
     ElMessage.error("更新锁定状态失败，请检查网络连接");
   }
 };
+
+// 计算置顶的提醒
+const pinnedList = computed(() => list.value.filter(item => item.lock === "on"));
+
+// 计算非置顶的提醒
+const nonPinnedList = computed(() => list.value.filter(item => item.lock !== "on"));
 </script>
 
 <style scoped>
@@ -320,7 +341,7 @@ const toggleLock = async (item: Remindcard) => {
   /* 卡片宽度 */
   box-sizing: border-box;
   position: relative;
-  /* 设置父容器为相对定位 */
+
 }
 
 .ghost {
@@ -422,4 +443,6 @@ const toggleLock = async (item: Remindcard) => {
 .locked-card {
   pointer-events: none; /* 禁止拖拽 */
 }
+
+
 </style>

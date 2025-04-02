@@ -88,7 +88,7 @@ const submitForm = async () => {
     if (valid) {
       try {
         const username = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!).username : null;
-        const userId = localStorage.getItem('userId'); // 获取存储的 userid
+        const userId = localStorage.getItem('userId'); 
         if (!username || !userId) {
           ElMessage.error('用户信息缺失，请重新登录');
           return;
@@ -103,19 +103,19 @@ const submitForm = async () => {
         const response = await axios.post(
           'http://localhost:8080/user/changePassword',
           {
-            username, // 确保传递 username 参数
+            username, 
             userid: userId, 
             oldPassword: user.oldPassword,
             newPassword: user.newPassword,
           },
           {
-            headers: { Authorization: `Bearer ${token}` }, // 确保传递 Authorization 头部
+            headers: { Authorization: `Bearer ${token}` }, 
           }
         );
           console.log('修改密码返回数据:', response.data);
         if (response.data.code === '200') {
           ElMessage.success('密码修改成功，请重新登录');
-          logout(); // 修改密码成功后自动退出登录
+          logout(); 
         } else {
           ElMessage.error(response.data.message || '密码修改失败');
         }

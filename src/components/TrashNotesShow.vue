@@ -26,7 +26,7 @@
             </el-card>
         </div>
     </div>
-    <div v-else class="empty-state">暂无回收站便签</div> <!-- 添加空状态提示 -->
+    <div v-else class="empty-state">暂无回收站便签</div> 
 </template>
 
 <script setup lang="ts">

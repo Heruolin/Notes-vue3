@@ -109,7 +109,7 @@ const onUpdate = () => {
 };
 // 打开编辑页
 const openEditor = (item: Notecard) => {
-    selectedCard.value = { ...item }; // 克隆对象，避免直接修改原始数据
+    selectedCard.value = { ...item }; 
     dialogVisible.value = true;
 };
 

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>便签</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 10px;
+      padding: 10px;
+      background-color: #fff;
+    }
+    .note-content {
+      white-space: pre-line;
+      word-break: break-word;
+    }
+    img {
+      max-width: 100%;
+      height: auto;
+      margin-top: 10px;
+    }
+    #note-title {
+      text-align: center; /* 标题居中 */
+      margin-bottom: 20px; /* 增加下方间距 */
+    }
+    #note-images {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px; /* 图片之间的间距 */
+      justify-content: center; /* 图片居中对齐 */
+      margin-bottom: 20px; /* 增加下方间距 */
+    }
+    #note-images img {
+      max-width: 300px; /* 限制图片宽度 */
+      height: auto;
+      border-radius: 5px; /* 添加圆角 */
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* 添加阴影 */
+    }
+  </style>
+</head>
+<body>
+  <div id="note-images"></div>
+  <h2 id="note-title"></h2>
+  <div id="note-content" class="note-content"></div>
+
+  <script>
+    const renderNoteContent = (noteData) => {
+      console.log("接收到便签数据:", noteData);
+
+      // 确保 DOM 元素存在
+      const titleElement = document.getElementById("note-title");
+      const contentElement = document.getElementById("note-content");
+      const imagesContainer = document.getElementById("note-images");
+
+      if (!titleElement || !contentElement || !imagesContainer) {
+        console.error("DOM 元素未找到，无法渲染便签内容");
+        return;
+      }
+
+      document.body.style.backgroundColor = noteData.backgroundColor || "#fff";
+      titleElement.innerText = noteData.title || "无标题";
+      contentElement.innerHTML = noteData.content || "无内容";
+
+      imagesContainer.innerHTML = ""; // 清空之前的图片
+      noteData.images.forEach(src => {
+        const img = document.createElement("img");
+        img.src = src;
+        imagesContainer.appendChild(img);
+      });
+    };
+
+    const initialize = () => {
+      if (typeof window.electron !== 'undefined' && window.electron.onUpdateNoteContent) {
+        // Electron 环境下，通过 IPC 接收数据
+        console.log("Electron 环境下运行");
+        window.electron.onUpdateNoteContent((event, noteData) => {
+          renderNoteContent(noteData);
+        });
+      } else {
+        // 非 Electron 环境下，通过 URL 参数接收数据
+        console.log("普通浏览器环境下运行");
+        try {
+          const urlParams = new URLSearchParams(window.location.search);
+          const noteData = {
+            title: urlParams.get('title') || "无标题",
+            content: decodeURIComponent(urlParams.get('content') || ""),
+            backgroundColor: urlParams.get('backgroundColor') || "#fff",
+            images: JSON.parse(decodeURIComponent(urlParams.get('images') || "[]")),
+          };
+          renderNoteContent(noteData);
+        } catch (error) {
+          console.error("解析 URL 参数失败:", error);
+
+          // 确保 DOM 元素存在
+          const titleElement = document.getElementById("note-title");
+          const contentElement = document.getElementById("note-content");
+
+          if (titleElement && contentElement) {
+            titleElement.innerText = "加载便签失败";
+            contentElement.innerText = "无法解析便签数据，请检查 URL 参数是否正确。";
+          }
+        }
+      }
+    };
+
+    // 确保脚本在 DOM 加载完成后执行
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", initialize);
+    } else {
+      initialize();
+    }
+  </script>
+</body>
+</html>

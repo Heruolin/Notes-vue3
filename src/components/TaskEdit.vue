@@ -234,7 +234,8 @@ async function save() {
     const updatedTaskgroup = { 
       ...localData.value, 
       tasks: updatedTasks,
-      userid:userId // 注入用户ID到任务组
+      userid: userId, // 注入用户ID到任务组
+      status: 'active' // 自动注入 status 字段
     };
     console.log("Updated Taskgroup:", updatedTaskgroup);
     if (localData.value.id) {
@@ -255,7 +256,7 @@ async function save() {
             taskgroupId: task.taskgroupId,
             completed: task.completed,
             order: task.order,
-            userId:userId // 注入用户ID到任务组
+            userId // 注入用户ID到任务组
           }, {
             headers: { 
               'Content-Type': 'application/json',

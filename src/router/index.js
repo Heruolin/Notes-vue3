@@ -2,6 +2,11 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
   {
+    path: '/',
+    name: 'home',
+    component: () => import('../views/Index.vue'),
+  },
+  {
     path: '/index',
     name: 'index',
     component: () => import('../views/Index.vue'),
@@ -60,6 +65,11 @@ const routes = [
     path:'/ChangePassword',
     name:'ChangePassword',
     component:()=>import('../components/ChangePassword.vue')
+  },
+  {
+    path:'/Popup',
+    name:'Popup',
+    component:()=>import('../views/Popup.vue')
   }
 ]
 
@@ -69,9 +79,10 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('jwt_token'); // 检查是否有 token
-  if (!token && to.name === 'index') {
-    // 如果未登录且访问的是 Index 页面，跳转到 Login 页面
+  const token = localStorage.getItem('jwt_token'); // 获取 JWT Token
+  
+  if (!token && (to.name === 'index' || to.path === '/')) {
+    // 如果未登录，且访问的是 Index 页面或根路径，则跳转到 Login 页面
     next({ name: 'Login' });
   } else {
     next(); // 继续导航

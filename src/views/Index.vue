@@ -34,7 +34,7 @@
           <el-sub-menu index="notes">
             <template #title>
               <el-icon><House /></el-icon>
-              <span>便签</span>
+              <span>记事</span>
             </template>
             <el-menu-item-group>
               <el-menu-item index="all" @click="showAllNotes">
@@ -73,7 +73,7 @@
             </template>
             <el-menu-item-group>
               <el-menu-item index="archiveNotes" @click="showArchiveNotes">
-                便签
+                记事
               </el-menu-item>
               <el-menu-item index="archiveTask" @click="showArchiveTask">
                 清单
@@ -91,7 +91,7 @@
             </template>
             <el-menu-item-group>
               <el-menu-item index="recycleNotes" @click="showRecycleNotes">
-                便签
+                记事
               </el-menu-item>
               <el-menu-item index="recycleTask" @click="showRecycleTask">
                 清单
@@ -327,7 +327,7 @@ const showAllNotes = async () => {
 };
 
 const filterNotesByTag = async (tag: string) => {
-  selectedTag.value = tag; // 记录当前筛选的标签
+  selectedTag.value = tag; 
   try {
     const userId = localStorage.getItem('userId'); // 获取当前用户的userid
     const response: LoginResponse = await request.get('/Notes/NotesByTag', {
@@ -341,11 +341,14 @@ const filterNotesByTag = async (tag: string) => {
     });
 
     if (response.code === "200") {
-      filteredNotes.value = response.data.map((item: any) => ({
-        ...item,
-        imgList: item.img ? item.img.split(",").filter(img => img.trim() !== "") : [],
-        tagList: item.tag ? item.tag.split(",").filter(tag => tag.trim() !== "") : [],
-      }));
+      filteredNotes.value = response.data
+        .map((item: any) => ({
+          ...item,
+          imgList: item.img ? item.img.split(",").filter(img => img.trim() !== "") : [],
+          tagList: item.tag ? item.tag.split(",").filter(tag => tag.trim() !== "") : [],
+        }))
+        .filter(note => note.tagList.includes(tag)) 
+
       currentView.value = 'notes';
     } else {
       ElMessage.error('根据标签筛选便签失败');

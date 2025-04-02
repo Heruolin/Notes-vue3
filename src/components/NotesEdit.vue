@@ -225,7 +225,7 @@ const handleImageUpload = async (event: Event) => {
       }
     } catch (error) {
       console.error('图片上传失败', error);
-      alert('图片上传失败，请检查网络连接');
+      alert('图片上传失败，图片过大，或请检查网络连接');
     }
   } else {
     console.error('未选择文件');
@@ -273,17 +273,13 @@ const fetchTags = async () => {
     
     const response: LoginResponse = await request.get('/Tag/Taglist', {
       headers: {
-        Authorization: `Bearer ${token}` // 传递Authorization头部
+        Authorization: `Bearer ${token}` 
       },
       params: {
-        userid: userId // 传递userid参数
+        userid: userId 
       }
     });
-    console.log("Full response:", response);
-    console.log("response.code:", response.code);
-    console.log("response.data:", response.data);  // 查看数据
     
-    // 判断返回的 code 是否是 "200" 并直接使用 response.data
     if (response.code === '200' && Array.isArray(response.data)) {
       tagList.value = response.data.map((tag: { id: number; tag: string }) => ({
         id: tag.id,
@@ -313,7 +309,7 @@ const addSelectedTags = () => {
   let duplicateTags = [];
   selectedTags.value.forEach((tag: any) => {
     if (!localData.value.tagList.includes(tag.tag)) {
-      localData.value.tagList.push(tag.tag);  // 只更新标签列表
+      localData.value.tagList.push(tag.tag);  
     } else {
       duplicateTags.push(tag.tag);
     }

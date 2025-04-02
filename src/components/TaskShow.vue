@@ -1,9 +1,9 @@
 <template>
-  <div class="flex">
-    <VueDraggable ref="el" v-model="taskgroups" :animation="150" ghost-class="ghost" class="card-container"
-      @start="onStart" @update="onUpdate" @end="onEnd" :filter="'.locked-card'">
-      <div v-for="taskgroup in taskgroups" :key="taskgroup.id" class="card-item" :class="{ 'locked-card': taskgroup.lock === 'on' }">
-        <el-card shadow="always" class="fixed-card" @click="openEditor(taskgroup)">
+  <div class="flex flex-col">
+    <!-- 置顶清单组 -->
+    <div v-if="pinnedList.length > 0" class="card-container">
+      <div v-for="taskgroup in pinnedList" :key="taskgroup.id" class="card-item pinned-card" @click="openEditor(taskgroup)">
+        <el-card shadow="always" class="fixed-card">
           <template #header>
             <div class="pin-container" @click.stop="toggleLock(taskgroup)" :class="{ 'hover-visible': taskgroup.lock === 'on' }">
               <svg>
@@ -26,12 +26,40 @@
                 </template>
               </el-input>
             </div>
-            <div v-if="taskgroup.tasks?.filter(task => task.completed).length > 0">已完成清单</div>
-            <div v-for="task in taskgroup.tasks?.filter(task => task.completed).sort((a, b) => a.order - b.order) ?? []" :key="task.id">
-              <el-input v-model="task.name" style="max-width: 600px" placeholder="空白内容" class="input-with-select" disabled>
+          </div>
+          <template #footer>
+            <div class="flex justify-start gap-2" style="margin-top: 10px;">
+              <el-button circle title="归档" icon="FolderAdd" @click.stop="archiveTaskgroup(taskgroup.id)" />
+              <el-button circle title="删除清单" icon="Failed" @click.stop="confirmTrash(taskgroup.id)" />
+            </div>
+          </template>
+        </el-card>
+      </div>
+      <el-divider />
+    </div>
+
+    <!-- 非置顶清单组 -->
+    <VueDraggable ref="el" v-model="nonPinnedList" :animation="150" ghost-class="ghost" class="card-container" @start="onStart"
+      @update="onUpdate" @end="onEnd" :filter="'.locked-card'">
+      <div v-for="taskgroup in nonPinnedList" :key="taskgroup.id" class="card-item" @click="openEditor(taskgroup)" :class="{ 'locked-card': taskgroup.lock === 'on' }">
+        <el-card shadow="always" class="fixed-card">
+          <template #header>
+            <div class="pin-container" @click.stop="toggleLock(taskgroup)" :class="{ 'hover-visible': taskgroup.lock === 'on' }">
+              <svg>
+                <use :xlink:href="taskgroup.lock === 'on' ? '#icon-pushpin-2-line' : '#icon-pushpin-line'"></use>
+              </svg>
+            </div>
+            <div>
+              <h1>{{ taskgroup.title }}</h1>
+            </div>
+          </template>
+          <div>
+            <div v-if="taskgroup.tasks?.filter(task => !task.completed).length > 0">未完成清单</div>
+            <div v-for="task in taskgroup.tasks?.filter(task => !task.completed).sort((a, b) => a.order - b.order) ?? []" :key="task.id">
+              <el-input v-model="task.name" type="text" style="max-width: 600px" placeholder="空白内容" class="input-with-select">
                 <template #append>
                   <div class="button-group">
-                    <el-button @click.stop="markAsIncomplete(taskgroup.id, task.id)" :icon="RefreshRight" />
+                    <el-button @click.stop="markAsComplete(taskgroup.id, task.id)" :icon="Check" />
                     <el-button @click.stop="removeTask(taskgroup.id, task.id)" :icon="CloseBold" />
                   </div>
                 </template>
@@ -47,6 +75,7 @@
         </el-card>
       </div>
     </VueDraggable>
+
     <TaskEdit v-model:visible="dialogVisible" :data="selectedTaskgroup" @refreshTaskgroups="fetchTaskgroups" @close="closeEditor" />
     <FloatingButton @refreshTaskgroups="fetchTaskgroups" />
     <div class="flex justify-between">
@@ -268,15 +297,28 @@ const trashTaskgroup = async (id: number) => {
 // 删除任务
 const removeTask = async (taskgroupId: number, taskId: number) => {
   try {
+    const token = localStorage.getItem("jwt_token"); // 获取存储的 token
+    if (!token) {
+      ElMessage.error("用户未登录或缺少必要的认证信息");
+      return;
+    }
+
     await axios.delete("http://localhost:8080/Task/TaskDelete", {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${token}` }, // 添加 Authorization 头部
       params: { id: taskId }
     });
+
     const taskgroup = taskgroups.value.find(group => group.id === taskgroupId);
     if (taskgroup) {
       taskgroup.tasks = taskgroup.tasks.filter(task => task.id !== taskId);
     }
-  } catch (error) {
+    ElMessage.success("任务删除成功");
+  } catch (error: any) {
+    if (error.response && error.response.status === 403) {
+      ElMessage.error("权限不足，请重新登录");
+    } else {
+      ElMessage.error("删除任务失败，请检查网络连接");
+    }
     console.error("Failed to delete task:", error);
   }
 };
@@ -284,15 +326,29 @@ const removeTask = async (taskgroupId: number, taskId: number) => {
 // 标记任务为已完成
 const markAsComplete = async (taskgroupId: number, taskId: number) => {
   try {
+    const token = localStorage.getItem("jwt_token"); // 获取存储的 token
+    if (!token) {
+      ElMessage.error("用户未登录或缺少必要的认证信息");
+      return;
+    }
+
     const taskgroup = taskgroups.value.find(group => group.id === taskgroupId);
     if (taskgroup) {
       const task = taskgroup.tasks.find(task => task.id === taskId);
       if (task) {
         task.completed = true;
-        await axios.put("http://localhost:8080/Task/TaskUpdate", task);
+        await axios.put("http://localhost:8080/Task/TaskUpdate", task, {
+          headers: { Authorization: `Bearer ${token}` } // 添加 Authorization 头部
+        });
+        ElMessage.success("任务标记为已完成");
       }
     }
-  } catch (error) {
+  } catch (error: any) {
+    if (error.response && error.response.status === 403) {
+      ElMessage.error("权限不足，请重新登录");
+    } else {
+      ElMessage.error("标记任务为已完成失败，请检查网络连接");
+    }
     console.error("Failed to mark task as complete:", error);
   }
 };
@@ -300,20 +356,34 @@ const markAsComplete = async (taskgroupId: number, taskId: number) => {
 // 标记任务为未完成
 const markAsIncomplete = async (taskgroupId: number, taskId: number) => {
   try {
+    const token = localStorage.getItem("jwt_token"); // 获取存储的 token
+    if (!token) {
+      ElMessage.error("用户未登录或缺少必要的认证信息");
+      return;
+    }
+
     const taskgroup = taskgroups.value.find(group => group.id === taskgroupId);
     if (taskgroup) {
       const task = taskgroup.tasks.find(task => task.id === taskId);
       if (task) {
         task.completed = false;
-        await axios.put("http://localhost:8080/Task/TaskUpdate", task);
+        await axios.put("http://localhost:8080/Task/TaskUpdate", task, {
+          headers: { Authorization: `Bearer ${token}` } // 添加 Authorization 头部
+        });
+        ElMessage.success("任务标记为未完成");
       }
     }
-  } catch (error) {
+  } catch (error: any) {
+    if (error.response && error.response.status === 403) {
+      ElMessage.error("权限不足，请重新登录");
+    } else {
+      ElMessage.error("标记任务为未完成失败，请检查网络连接");
+    }
     console.error("Failed to mark task as incomplete:", error);
   }
 };
 
-// 过滤出状态为 actived和teashed 的任务清单
+// 过滤出状态为 active 的任务清单
 const activeTaskgroups = computed(() => {
   return taskgroups.value.filter(taskgroup => taskgroup.status !== 'archived' && taskgroup.status !== 'trashed');
 });
@@ -339,6 +409,12 @@ const toggleLock = async (taskgroup: Taskgroup) => {
     ElMessage.error("更新锁定状态失败，请检查网络连接");
   }
 };
+
+// 计算置顶的清单组
+const pinnedList = computed(() => taskgroups.value.filter(taskgroup => taskgroup.lock === "on"));
+
+// 计算非置顶的清单组
+const nonPinnedList = computed(() => taskgroups.value.filter(taskgroup => taskgroup.lock !== "on"));
 
 // 初始化时加载数据
 onMounted(() => {
@@ -435,4 +511,5 @@ onMounted(() => {
 .locked-card {
   pointer-events: auto; /* 允许点击事件 */
 }
+
 </style>

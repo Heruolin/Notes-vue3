@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>便签</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 10px;
+      padding: 10px;
+      background-color: #fff;
+    }
+    .note-content {
+      white-space: pre-line;
+      word-break: break-word;
+    }
+    img {
+      max-width: 100%;
+      height: auto;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h2 id="note-title"></h2>
+  <div id="note-content" class="note-content"></div>
+  <div id="note-images"></div>
+
+  <script>
+    const { ipcRenderer } = require("electron");
+
+    ipcRenderer.on("update-note-content", (event, noteData) => {
+      document.body.style.backgroundColor = noteData.backgroundColor || "#fff";
+      document.getElementById("note-title").innerText = noteData.title;
+      document.getElementById("note-content").innerHTML = noteData.content;
+
+      const imagesContainer = document.getElementById("note-images");
+      imagesContainer.innerHTML = ""; // 清空之前的图片
+      noteData.images.forEach(src => {
+        const img = document.createElement("img");
+        img.src = src;
+        imagesContainer.appendChild(img);
+      });
+    });
+  </script>
+</body>
+</html>
